@@ -3,7 +3,7 @@ package com.example.historialmedico.security
 import android.content.Context
 import java.security.MessageDigest
 
-//TODO: migrar a EncryptedSharedPreferences, usa SHA-256 es poca seguridad por 4 pines
+//TODO:migrar a EncryptedSharedPreferences, usa SHA-256 es poca seguridad por 4 pines
 
 class PinManager (context: Context){
     private val prefs= context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
