@@ -32,7 +32,7 @@ Este proyecto sigue el modelo GitFlow:
 
 ## Estado Actual
 
-- **Autenticacion:** biometria funcionando, PIN en desarrollo
+- **Autenticacion:** biometría y PIN funcionando, pendiente migrar a EncryptedSharedPreferences
 - **Historial medico:** pendiente
 - **Alarmas y recordatorios:** pendiente
 - **Exportacion:** pendiente
