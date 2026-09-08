@@ -35,7 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.paint
+import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.historialmedico.security.BiometricAuthManager
 import com.example.historialmedico.ui.theme.HistorialMedicoTheme
@@ -191,6 +193,14 @@ fun CreatePinScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Icon(
+            imageVector = Icons.Filled.Lock,
+            contentDescription = null,
+            modifier= Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier= Modifier.height(16.dp))
+
         Text("Cree su PIN de Acceso", style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold)
         Text(
@@ -224,7 +234,8 @@ fun CreatePinScreen(
         Spacer(modifier= Modifier.height(24.dp))
 
         Button(
-            onClick = {
+            colors= ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    onClick = {
                 when {
                     pin.length < 4 -> error = "El PIN debe tener minimo 4 digitos"
                     pin != confirmPin->error= "Los PIN no coinciden"
@@ -251,6 +262,13 @@ fun PinEntryScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Icon(
+            imageVector = Icons.Filled.Lock,
+            contentDescription = null,
+            modifier=Modifier.size(64.dp),
+            tint=MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier= Modifier.height(16.dp))
         Text("Ingrese su Pin", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(modifier= Modifier.height(24.dp))
 
@@ -269,8 +287,11 @@ fun PinEntryScreen(
         }
 
         Spacer(modifier= Modifier.height(24.dp))
-
-        Button(onClick = {onPinEntered(pin)},modifier= Modifier.fillMaxWidth().height(50.dp)) {
+        Button(
+        colors= ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+        onClick = {onPinEntered(pin)},
+            modifier= Modifier.fillMaxWidth().height(50.dp)
+        ) {
             Text("Desbloquear")
         }
         TextButton(onClick = onBack,modifier= Modifier.padding(top=8.dp)) {
