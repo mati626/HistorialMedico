@@ -38,8 +38,11 @@ import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.AppDataBase
 import com.example.historialmedico.data.Perfil
 import com.example.historialmedico.data.PerfilDao
+import com.example.historialmedico.data.Medicamento
+import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.ui.theme.HistorialMedicoTheme
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.clickable
 
 class MainActivity : ComponentActivity() {
     private lateinit var database: AppDataBase
@@ -52,6 +55,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     PerfilesScreen(
                         dao= database.perfilDao(),
+                        medicamentoDao= database.medicamentoDao(),
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -61,10 +65,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PerfilesScreen(dao: PerfilDao, modifier: Modifier=Modifier){
+fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao, modifier: Modifier=Modifier){
     val perfiles by dao.getAll().collectAsState(initial = emptyList())
     var nombre by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    var perfilSeleccionado by remember { mutableStateOf<Perfil?>(null) }
+
+
 
     Column(modifier=modifier.fillMaxSize().padding(16.dp)) {
         Text("Perfiles", style= MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -73,7 +80,9 @@ fun PerfilesScreen(dao: PerfilDao, modifier: Modifier=Modifier){
         LazyColumn(modifier= Modifier.weight(1f)) {
             items(perfiles) { perfil ->
                 Row(
-                    modifier=Modifier.fillMaxWidth().padding(vertical=4.dp),
+                    modifier=Modifier.fillMaxWidth().padding(vertical=4.dp).clickable{
+                        perfilSeleccionado=perfil
+                    },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -109,8 +118,71 @@ fun PerfilesScreen(dao: PerfilDao, modifier: Modifier=Modifier){
                 Text("Agregar")
             }
         }
+        perfilSeleccionado?.let { perfil ->
+            Spacer(modifier=Modifier.height(24.dp))
+            MedicamentosSection(dao=medicamentoDao,perfil=perfil)
+        }
     }
 }
+
+@Composable
+fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil){
+    val medicamentos by dao.getByPerfil(perfil.id).collectAsState(initial = emptyList())
+    var nombre by remember { mutableStateOf("") }
+    var dosis by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    Text("Medicamentos de ${perfil.nombre}", style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(8.dp))
+
+    medicamentos.forEach { medicamento ->
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical=4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            Text(
+                if(medicamento.dosis.isBlank()) medicamento.nombre
+                else "${medicamento.nombre}- ${medicamento.dosis}",
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = {scope.launch { dao.delete(medicamento) }}) {
+                Icon(imageVector = Icons.Filled.Delete, contentDescription = "Eliminar medicamento")
+            }
+        }
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value=nombre,
+            onValueChange = {nombre=it},
+            label = { Text("Nombre")},
+            modifier=Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        OutlinedTextField(
+            value = dosis,
+            onValueChange = {dosis=it},
+            label={Text("Dosis")},
+            modifier=Modifier.weight(1f)
+        )
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Button(onClick = {
+        if(nombre.isNotBlank()){
+            val nombreAGuardar=nombre
+            val dosisAGuardar=dosis
+            nombre=""
+            dosis=""
+            scope.launch {
+                dao.insert(Medicamento(perfilId = perfil.id,nombre=nombreAGuardar, dosis = dosisAGuardar))
+            }
+        }
+    }) {
+        Text("Agregar Medicamento")
+    }
+}
+
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
