@@ -5,9 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Perfil::class], version = 1, exportSchema = false)
+@Database(entities = [Perfil::class, Medicamento::class],version=2, exportSchema = false)
 abstract class AppDataBase: RoomDatabase() {
     abstract fun perfilDao(): PerfilDao
+    abstract fun medicamentoDao(): MedicamentoDao
 
     companion object {
         @Volatile private var INSTANCE: AppDataBase?=null
@@ -18,7 +19,7 @@ abstract class AppDataBase: RoomDatabase() {
                     context.applicationContext,
                     AppDataBase::class.java,
                     "historial_medico.db"
-                ).build().also { INSTANCE=it }
+                ).fallbackToDestructiveMigration(true).build().also { INSTANCE=it }
             }
     }
 }
