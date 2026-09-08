@@ -32,8 +32,8 @@ Este proyecto sigue el modelo GitFlow:
 
 ## Estado Actual
 
-- **Autenticacion:** biometría y PIN funcionando, pendiente migrar a EncryptedSharedPreferences
-- **Historial medico:** pendiente
+- **Autenticacion:** biometría y PIN funcionando, con PIN de respaldo, pendiente migrar a EncryptedSharedPreferences
+- **Historial medico:** funcional y probado, entidades 'Perfil' y 'Medicamento' (Room), crud para añadir y eliminar perfiles y medicamentos.
 - **Alarmas y recordatorios:** pendiente
 - **Exportacion:** pendiente
 
