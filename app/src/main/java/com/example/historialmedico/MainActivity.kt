@@ -26,6 +26,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -73,19 +75,26 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao, modifier: Mod
     var nombre by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var perfilSeleccionado by remember { mutableStateOf<Perfil?>(null) }
+    var perfilAEliminar by remember { mutableStateOf<Perfil?>(null) }
 
 
 
-    Column(modifier=modifier.fillMaxSize().imePadding().padding(16.dp)) {
+    Column(modifier=modifier
+        .fillMaxSize()
+        .imePadding()
+        .padding(16.dp)) {
         Text("Perfiles", style= MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(modifier= Modifier.height(16.dp))
 
         LazyColumn(modifier= Modifier.weight(1f)) {
             items(perfiles) { perfil ->
                 Row(
-                    modifier=Modifier.fillMaxWidth().padding(vertical=4.dp).clickable{
-                        perfilSeleccionado=perfil
-                    },
+                    modifier=Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable {
+                            perfilSeleccionado = perfil
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -93,9 +102,7 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao, modifier: Mod
                         modifier= Modifier.weight(1f)
                     )
                     IconButton(onClick =  {
-                        scope.launch {
-                            dao.delete(perfil)
-                        }
+                        perfilAEliminar=perfil
                     }){
                         Icon(imageVector = Icons.Filled.Delete, contentDescription = "Eliminar perfil")
                 }
@@ -125,18 +132,39 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao, modifier: Mod
             Spacer(modifier=Modifier.height(24.dp))
             MedicamentosSection(dao=medicamentoDao,perfil=perfil)
         }
+        perfilAEliminar?.let { perfil -> AlertDialog(
+            onDismissRequest = {perfilAEliminar=null},
+            title = {Text("Eliminar perfil")},
+            text = {Text("Seguro que quieres eliminar a ${perfil.nombre}? Se eliminaran tambien todos sus medicamentos.")},
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch { dao.delete(perfil) }
+                    perfilAEliminar=null
+                }) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {perfilAEliminar=null}) {
+                    Text("Cancelar")
+                }
+            }
+        ) }
     }
 }
 
 @Composable
 fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
     val medicamentos by dao.getByPerfil(perfil.id).collectAsState(initial = emptyList())
+    var medicamentoAEliminar by remember{mutableStateOf<Medicamento?>(null)}
     var nombre by remember { mutableStateOf("") }
     var dosis by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .verticalScroll(rememberScrollState())) {
         Text(
             "Medicamentos de ${perfil.nombre}", style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
@@ -145,7 +173,9 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
 
         medicamentos.forEach { medicamento ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -153,13 +183,35 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                     else "${medicamento.nombre}- ${medicamento.dosis}",
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { scope.launch { dao.delete(medicamento) } }) {
+                IconButton(onClick = { medicamentoAEliminar=medicamento }) {
                     Icon(
                         imageVector = Icons.Filled.Delete,
                         contentDescription = "Eliminar medicamento"
                     )
                 }
             }
+        }
+        medicamentoAEliminar?.let { medicamento ->
+            AlertDialog(
+                onDismissRequest = { medicamentoAEliminar = null },
+                title = { Text("Eliminar Medicamento") },
+                text = { Text("Seguro que quieres eliminar ${medicamento.nombre}?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        scope.launch { dao.delete(medicamento) }
+                        medicamentoAEliminar = null
+                    }) {
+                        Text("Eliminar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        medicamentoAEliminar = null
+                    }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
