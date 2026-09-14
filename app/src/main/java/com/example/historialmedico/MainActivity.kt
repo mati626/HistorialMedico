@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.IconButton
@@ -73,7 +76,7 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao, modifier: Mod
 
 
 
-    Column(modifier=modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier=modifier.fillMaxSize().imePadding().padding(16.dp)) {
         Text("Perfiles", style= MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(modifier= Modifier.height(16.dp))
 
@@ -126,62 +129,90 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao, modifier: Mod
 }
 
 @Composable
-fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil){
+fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
     val medicamentos by dao.getByPerfil(perfil.id).collectAsState(initial = emptyList())
     var nombre by remember { mutableStateOf("") }
     var dosis by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    Text("Medicamentos de ${perfil.nombre}", style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold)
-    Spacer(modifier = Modifier.height(8.dp))
+    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Text(
+            "Medicamentos de ${perfil.nombre}", style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
 
-    medicamentos.forEach { medicamento ->
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical=4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ){
-            Text(
-                if(medicamento.dosis.isBlank()) medicamento.nombre
-                else "${medicamento.nombre}- ${medicamento.dosis}",
+        medicamentos.forEach { medicamento ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (medicamento.dosis.isBlank()) medicamento.nombre
+                    else "${medicamento.nombre}- ${medicamento.dosis}",
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { scope.launch { dao.delete(medicamento) } }) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Eliminar medicamento"
+                    )
+                }
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = nombre,
+                onValueChange = { nombre = it },
+                label = { Text("Nombre") },
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = {scope.launch { dao.delete(medicamento) }}) {
-                Icon(imageVector = Icons.Filled.Delete, contentDescription = "Eliminar medicamento")
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedTextField(
+                value = dosis,
+                onValueChange = { dosis = it },
+                label = { Text("Dosis") },
+                modifier = Modifier.weight(1f)
+            )
         }
-    }
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value=nombre,
-            onValueChange = {nombre=it},
-            label = { Text("Nombre")},
-            modifier=Modifier.weight(1f)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        OutlinedTextField(
-            value = dosis,
-            onValueChange = {dosis=it},
-            label={Text("Dosis")},
-            modifier=Modifier.weight(1f)
-        )
-    }
-    Spacer(modifier = Modifier.height(8.dp))
-    Button(onClick = {
-        if(nombre.isNotBlank()){
-            val nombreAGuardar=nombre
-            val dosisAGuardar=dosis
-            nombre=""
-            dosis=""
-            scope.launch {
-                dao.insert(Medicamento(perfilId = perfil.id,nombre=nombreAGuardar, dosis = dosisAGuardar))
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = {
+            when{
+                nombre.isBlank()->error="El nombre del medicamento es obligatorio"
+                dosis.isBlank()->error="La dosis es obligatoria"
+                !dosis.any{it.isDigit()}->error="La dosis debe incluir un numero (ej:500mg)"
+                medicamentos.size>=MAX_MEDICAMENTOS_POR_PERFIL->error="Este perfil ya tiene el maximo de $MAX_MEDICAMENTOS_POR_PERFIL medicamentos"
+                medicamentos.any{it.nombre.trim().equals(nombre.trim(),ignoreCase = true)}->error="Ya existe un medicamento con ese nombre para este perfil"
+                else->{
+                    val nombreAGuardar=nombre.trim()
+                    val dosisAGuardar=dosis.trim()
+                    nombre=""
+                    dosis=""
+                    error=null
+                    scope.launch {
+                        dao.insert(
+                            Medicamento(
+                                perfilId = perfil.id,
+                                nombre = nombreAGuardar,
+                                dosis=dosisAGuardar
+                            )
+                        )
+                    }
+                }
             }
+        }) {
+            Text("Agregar Medicamento")
         }
-    }) {
-        Text("Agregar Medicamento")
+        error?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(it,color=MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
+
+private const val MAX_MEDICAMENTOS_POR_PERFIL=10
 
 
 @Composable
