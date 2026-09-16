@@ -1,9 +1,11 @@
 package com.example.historialmedico
 
+import android.R
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.AppDataBase
@@ -45,10 +46,16 @@ import com.example.historialmedico.data.Perfil
 import com.example.historialmedico.data.PerfilDao
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
+import com.example.historialmedico.data.HoraMedica
+import com.example.historialmedico.data.HoraMedicaDao
+import com.example.historialmedico.data.Examen
+import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.ui.theme.HistorialMedicoTheme
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
-
+import androidx.compose.foundation.layout.requiredHeightIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
 class MainActivity : ComponentActivity() {
     private lateinit var database: AppDataBase
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +68,7 @@ class MainActivity : ComponentActivity() {
                     PerfilesScreen(
                         dao= database.perfilDao(),
                         medicamentoDao= database.medicamentoDao(),
+                        horaMedicaDao =database.horaMedicaDao() ,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -70,7 +78,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao, modifier: Modifier=Modifier){
+fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao: HoraMedicaDao, modifier: Modifier=Modifier){
     val perfiles by dao.getAll().collectAsState(initial = emptyList())
     var nombre by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -131,6 +139,8 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao, modifier: Mod
         perfilSeleccionado?.let { perfil ->
             Spacer(modifier=Modifier.height(24.dp))
             MedicamentosSection(dao=medicamentoDao,perfil=perfil)
+            Spacer(modifier= Modifier.height(24.dp))
+            HorasMedicasSection(dao=horaMedicaDao,perfil=perfil)
         }
         perfilAEliminar?.let { perfil -> AlertDialog(
             onDismissRequest = {perfilAEliminar=null},
@@ -260,6 +270,118 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
         error?.let {
             Spacer(modifier = Modifier.height(8.dp))
             Text(it,color=MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+@Composable
+fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
+    val horas by dao.getByPerfil(perfil.id).collectAsState(initial =
+    emptyList())
+    var especialidad by remember { mutableStateOf("") }
+    var fecha by remember { mutableStateOf("") }
+    var lugar by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var horaAEliminar by remember { mutableStateOf<HoraMedica?>(null) }
+    var scope = rememberCoroutineScope()
+
+    Column(modifier =
+    Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Text(
+            "Horas Medicas de ${perfil.nombre}", style =
+                MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        horas.forEach { hora ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                Text(
+                    "${hora.especialidad}-${hora.fecha} (${hora.lugar})",
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = {horaAEliminar=hora}) {
+                    Icon(imageVector=Icons.Filled.Delete,
+                        contentDescription = "Eliminar hora medica")
+                }
+            }
+        }
+
+        horaAEliminar?.let { hora->
+            AlertDialog(
+                onDismissRequest = {horaAEliminar=null},
+                title = {Text("Eliminar hora medica")},
+                text = {Text("Seguro que quiere eliminar esta hora medica?")},
+                confirmButton={
+                    TextButton(onClick = {
+                        scope.launch { dao.delete(hora) }
+                        horaAEliminar=null
+                    }){
+                        Text("Eliminar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {horaAEliminar=null}){
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
+        OutlinedTextField(
+            value = especialidad,
+            onValueChange = {especialidad=it},
+            label = {Text("Especialidad")},
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = fecha,
+            onValueChange = {fecha=it},
+            label = {Text("Fecha (ej: 18/09/2026)")},
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = lugar,
+            onValueChange = {lugar=it},
+            label = {Text("Lugar")},
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick ={
+            when {
+                especialidad.isBlank() -> error = "La especialidad es obligatoria"
+                fecha.isBlank() -> error = "La fecha es obligatoria"
+                lugar.isBlank() -> error = "El lugar es obligatorio"
+                else -> {
+                    val especialidadAGuardar = especialidad.trim()
+                    val fechaAGuardar = fecha.trim()
+                    val lugarAGuardar = lugar.trim()
+                    especialidad = ""
+                    fecha = ""
+                    lugar = ""
+                    error = null
+                    scope.launch {
+                        dao.insert(
+                            HoraMedica(
+                                perfilId = perfil.id,
+                                especialidad = especialidadAGuardar,
+                                fecha = fechaAGuardar,
+                                lugar = lugarAGuardar
+                            )
+                        )
+                    }
+                }
+            }
+        }){
+            Text("Agregar Hora Medica")
+        }
+        error?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(it,color=MaterialTheme.colorScheme.error, style=MaterialTheme.typography.bodySmall)
         }
     }
 }
