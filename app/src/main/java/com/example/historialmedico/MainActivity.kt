@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.vector.ImageVector
 class MainActivity : ComponentActivity() {
     private lateinit var database: AppDataBase
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
                         dao= database.perfilDao(),
                         medicamentoDao= database.medicamentoDao(),
                         horaMedicaDao =database.horaMedicaDao() ,
+                        examenDao = database.examenDao(),
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -78,7 +80,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao: HoraMedicaDao, modifier: Modifier=Modifier){
+fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao: HoraMedicaDao, examenDao: ExamenDao, modifier: Modifier=Modifier){
     val perfiles by dao.getAll().collectAsState(initial = emptyList())
     var nombre by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -141,6 +143,8 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
             MedicamentosSection(dao=medicamentoDao,perfil=perfil)
             Spacer(modifier= Modifier.height(24.dp))
             HorasMedicasSection(dao=horaMedicaDao,perfil=perfil)
+            Spacer(modifier= Modifier.height(24.dp))
+            ExamenesSection(dao = examenDao,perfil=perfil)
         }
         perfilAEliminar?.let { perfil -> AlertDialog(
             onDismissRequest = {perfilAEliminar=null},
@@ -382,6 +386,118 @@ fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
         error?.let {
             Spacer(modifier = Modifier.height(8.dp))
             Text(it,color=MaterialTheme.colorScheme.error, style=MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
+    val examenes by dao.getByPerfil(perfil.id).collectAsState(initial = emptyList())
+    var tipo by remember { mutableStateOf("") }
+    var fecha by remember { mutableStateOf("") }
+    var resultado by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var examenAEliminar by remember { mutableStateOf<Examen?>(null) }
+    val scope = rememberCoroutineScope()
+
+    Column(modifier =
+        Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Text(
+            "Examenes de ${perfil.nombre}",
+            style=MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        examenes.forEach { examen ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                Text(
+                    "${examen.tipo} - ${examen.fecha} (${examen.resultado})",
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = {examenAEliminar=examen}) {
+                    Icon(imageVector = Icons.Filled.Delete,
+                        contentDescription = "Eliminar examen")
+                }
+            }
+        }
+        examenAEliminar?.let { examen ->
+            AlertDialog(
+                onDismissRequest = {examenAEliminar=null},
+                title = {Text("Eliminar examen")},
+                text = {Text("Seguro que quiere eliminar este examen?")},
+                confirmButton = {
+                    TextButton(onClick = {
+                        scope.launch { dao.delete(examen) }
+                        examenAEliminar=null
+                    }) {
+                        Text("Eliminar")
+                    }
+                },
+                dismissButton={
+                    TextButton(onClick = {examenAEliminar=null}) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
+
+        OutlinedTextField(
+            value=tipo,
+            onValueChange = {tipo=it},
+            label = {Text("Tipo de Examen")},
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value=fecha,
+            onValueChange = {fecha=it},
+            label = {Text("Fecha (ej: 18/09/2026)")},
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = resultado,
+            onValueChange = {resultado=it},
+            label = {Text("Resultado")},
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = {
+            when{
+                tipo.isBlank()->error="El tipo de examen es obligatorio"
+                fecha.isBlank()->error="La fecha es obligatoria"
+                resultado.isBlank()->error="El resultado es obligatorio"
+                else->{
+                    val tipoAGuardar = tipo.trim()
+                    val fechaAGuardar = fecha.trim()
+                    val resultadoAGuardar = resultado.trim()
+                    tipo=""
+                    fecha=""
+                    resultado=""
+                    error=null
+                    scope.launch {
+                        dao.insert(
+                            Examen(
+                                perfilId = perfil.id,
+                                tipo = tipoAGuardar,
+                                fecha = fechaAGuardar,
+                                resultado = resultadoAGuardar
+                            )
+                        )
+                    }
+                }
+            }
+        }) {
+            Text("Agregar Examen")
+        }
+    error?.let {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(it,color=MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall)
         }
     }
 }
