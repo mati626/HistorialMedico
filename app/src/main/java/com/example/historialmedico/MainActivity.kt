@@ -1,10 +1,17 @@
 package com.example.historialmedico
 
+import java.io.File
 import android.R
+import android.net.Uri
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Column
@@ -41,6 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import com.example.historialmedico.data.AppDataBase
 import com.example.historialmedico.data.Perfil
 import com.example.historialmedico.data.PerfilDao
@@ -51,12 +60,17 @@ import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.ui.theme.HistorialMedicoTheme
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.vector.ImageVector
+import kotlin.contracts.contract
+
 class MainActivity : ComponentActivity() {
     private lateinit var database: AppDataBase
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -399,6 +413,32 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
     var error by remember { mutableStateOf<String?>(null) }
     var examenAEliminar by remember { mutableStateOf<Examen?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val activity = context as Activity
+    var documentoUri by remember { mutableStateOf<String?>(null) }
+
+    val scannerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { activityResult ->
+        if (activityResult.resultCode== Activity.RESULT_OK){
+            val resultado = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
+            val paginas = resultado?.pages
+            if(!paginas.isNullOrEmpty()){
+                documentoUri=paginas[0].imageUri.toString()
+            }
+        }
+    }
+
+    val scannerOptions = GmsDocumentScannerOptions.Builder()
+        .setGalleryImportAllowed(false)
+        .setPageLimit(1)
+        .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+        .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+        .build()
+
+    val scanner = GmsDocumentScanning.getClient(scannerOptions)
+
+
 
     Column(modifier =
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
@@ -417,6 +457,19 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
                     "${examen.tipo} - ${examen.fecha} (${examen.resultado})",
                     modifier = Modifier.weight(1f)
                 )
+                if(examen.documentoUri!=null){
+                    TextButton(onClick = {
+                        val archivo= File(Uri.parse(examen.documentoUri).path!!)
+                        val contentUri= FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",archivo)
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(contentUri,"image/*")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(intent)
+                    }) {
+                                Text("Ver")
+                    }
+                }
                 IconButton(onClick = {examenAEliminar=examen}) {
                     Icon(imageVector = Icons.Filled.Delete,
                         contentDescription = "Eliminar examen")
@@ -465,7 +518,18 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-
+        Button(onClick = {
+            scanner.getStartScanIntent(activity)
+                .addOnSuccessListener { intentSender -> scannerLauncher
+                    .launch(IntentSenderRequest.Builder(intentSender).build())
+                }
+                .addOnFailureListener {
+                    error="No se logro abrir el escaner"
+                }
+        }) {
+            Text(if(documentoUri==null)"Escanear Documento" else "Documento escaneado (volver a escanear)")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             when{
                 tipo.isBlank()->error="El tipo de examen es obligatorio"
@@ -475,9 +539,11 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
                     val tipoAGuardar = tipo.trim()
                     val fechaAGuardar = fecha.trim()
                     val resultadoAGuardar = resultado.trim()
+                    val documentoAGuardar = documentoUri
                     tipo=""
                     fecha=""
                     resultado=""
+                    documentoUri=null
                     error=null
                     scope.launch {
                         dao.insert(
@@ -485,7 +551,8 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
                                 perfilId = perfil.id,
                                 tipo = tipoAGuardar,
                                 fecha = fechaAGuardar,
-                                resultado = resultadoAGuardar
+                                resultado = resultadoAGuardar,
+                                documentoUri = documentoAGuardar
                             )
                         )
                     }

@@ -22,5 +22,6 @@ data class Examen(
     val perfilId: Long,
     val tipo: String,
     val fecha: String,
-    val resultado: String
+    val resultado: String,
+    val documentoUri: String?=null
 )
