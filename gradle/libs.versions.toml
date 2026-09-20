@@ -27,7 +27,8 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-material-icons-core = { group= "androidx.compose.material", name = "material-icons-core" }
 androidx-biometric={group="androidx.biometric",name="biometric",version="1.1.0"}
 androidx-security-crypto = { group= "androidx.security",name="security-crypto", version = "1.1.0-alpha06"}
+mlkit-document-scanner={ group= "com.google.android.gms", name="play-services-mlkit-document-scanner",version="16.0.0"}
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
+ksp = { id = "com.google.devtools.ksp", version = "2.2.10-2.0.2" }
