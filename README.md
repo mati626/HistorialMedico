@@ -7,6 +7,7 @@ Aplicación móvil diseñada para el registro, organización y seguimiento de la
 - **Kotlin** + Jetpack Compose (interfaz de usuario)
 - **Room** - persistencia local (base de datos SQLite en el dispositivo)
 - **BiometricPrompt** + **EncryptedSharedPreferences** - autenticación y seguridad local
+- **ML Kit Document Scanner** - escaneo y adjunto de documentos (examenes medicos)
 
 ## Arquitectura y Privacidad
 
@@ -26,14 +27,17 @@ Este proyecto sigue el modelo GitFlow:
 ## Como Correr el Proyecto
 
 1. Clonar el repositorio
-2. Abrir el proyecto en Android studio
-3. Sincronizar Gradle (opcion: Sync Now)
-4. Ejecutar en emulador o dispositivo físico con Android 7.0 (API 24) o superior
+2. Cambiar a la rama 'develop' (modulos integrados)
+3. Abrir el proyecto en Android studio
+4. Sincronizar Gradle (opcion: Sync Now)
+5. Ejecutar en emulador o dispositivo físico con Android 7.0 (API 24) o superior
 
 ## Estado Actual
 
-- **Autenticacion:** biometría y PIN funcionando, con PIN de respaldo, pendiente migrar a EncryptedSharedPreferences
-- **Historial medico:** funcional y probado, entidades 'Perfil' y 'Medicamento' (Room), crud para añadir y eliminar perfiles y medicamentos.
+- **Autenticacion:** biometria y PIN de respaldo funcionando, con el PIN cifrado mediante EncryptedSharedPreferences (Android Keystore) - ya esta migrado.
+- **Historial medico:** funcional y probado, entidades 'Perfil', 'Medicamento', 'HoraMedica' y 'Examen' (Room), CRUD completo para cada una. Los examenes soportan escaneo y adjunto de documentos reales mediante ML Kit Document Scanner.
+- **Integracion:** 'feature/autenticacion' y 'feature/historial-medico' ya fusionadas en 'develop'- la app unifica login (biometría/PIN) y registro de historial medico en un solo flujo.
+- **CI/CD**: GitHub Actions compila el proyecto automaticamente en cada push.
 - **Alarmas y recordatorios:** pendiente
 - **Exportacion:** pendiente
 
