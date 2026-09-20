@@ -77,6 +77,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxHeight
 
 enum class AuthScreen {CREATE_PIN, LOCKED, ENTER_PIN, AUTHENTICATED}
 
@@ -464,22 +465,28 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
         Spacer(modifier = Modifier.height(8.dp))
 
         medicamentos.forEach { medicamento ->
-            Row(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
-                Text(
-                    if (medicamento.dosis.isBlank()) medicamento.nombre
-                    else "${medicamento.nombre}- ${medicamento.dosis}",
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = { medicamentoAEliminar=medicamento }) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Eliminar medicamento"
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(12.dp), verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        if (medicamento.dosis.isBlank()) medicamento.nombre
+                        else "${medicamento.nombre}- ${medicamento.dosis}",
+                        modifier = Modifier.weight(1f)
                     )
+                    IconButton(onClick = { medicamentoAEliminar = medicamento }) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Eliminar medicamento"
+                        )
+                    }
                 }
             }
         }
@@ -576,19 +583,27 @@ fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
         Spacer(modifier = Modifier.height(8.dp))
 
         horas.forEach { hora ->
-            Row(
+            Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ){
-                Text(
-                    "${hora.especialidad}-${hora.fecha} (${hora.lugar})",
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = {horaAEliminar=hora}) {
-                    Icon(imageVector=Icons.Filled.Delete,
-                        contentDescription = "Eliminar hora medica")
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "${hora.especialidad}-${hora.fecha} (${hora.lugar})",
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { horaAEliminar = hora }) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Eliminar hora medica"
+                        )
+                    }
                 }
-            }
+                }
         }
 
         horaAEliminar?.let { hora->
@@ -713,20 +728,29 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
         Spacer(modifier = Modifier.height(8.dp))
 
         examenes.forEach { examen ->
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ){
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
-            ){
+            ) {
                 Text(
                     "${examen.tipo} - ${examen.fecha} (${examen.resultado})",
                     modifier = Modifier.weight(1f)
                 )
-                if(examen.documentoUri!=null){
+                if (examen.documentoUri != null) {
                     TextButton(onClick = {
-                        val archivo= File(Uri.parse(examen.documentoUri).path!!)
-                        val contentUri= FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",archivo)
+                        val archivo = File(Uri.parse(examen.documentoUri).path!!)
+                        val contentUri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            archivo
+                        )
                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(contentUri,"image/*")
+                            setDataAndType(contentUri, "image/*")
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                         context.startActivity(intent)
@@ -734,10 +758,13 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
                         Text("Ver")
                     }
                 }
-                IconButton(onClick = {examenAEliminar=examen}) {
-                    Icon(imageVector = Icons.Filled.Delete,
-                        contentDescription = "Eliminar examen")
+                IconButton(onClick = { examenAEliminar = examen }) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Eliminar examen"
+                    )
                 }
+            }
             }
         }
         examenAEliminar?.let { examen ->
