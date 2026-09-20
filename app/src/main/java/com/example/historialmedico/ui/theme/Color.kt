@@ -27,3 +27,6 @@ val NeutralGray700=Color(0xFF5D5D60)
 val NeutralGray600=Color(0xFF7A7A7D)
 
 val BackgroundLight=Color(0xFFF2F2F3)
+
+val TextPrimary = Color(0xFF1D1F20)
+val SurfaceAlt =Color(0xFFE9E9EA)

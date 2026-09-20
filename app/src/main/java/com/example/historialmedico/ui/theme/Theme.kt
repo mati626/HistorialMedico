@@ -3,20 +3,31 @@ package com.example.historialmedico.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
     tertiary = Pink80
+)
+
+val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(0.dp),
+    small = RoundedCornerShape(0.dp),
+    medium = RoundedCornerShape(0.dp),
+    large = RoundedCornerShape(0.dp),
+    extraLarge = RoundedCornerShape(0.dp)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -30,10 +41,10 @@ private val LightColorScheme = lightColorScheme(
     onSecondary = Color.White,
 
     background = BackgroundLight,
-    onBackground = NeutralGray700,
+    onBackground = TextPrimary,
 
-    surface = BackgroundLight,
-    onSurface = NeutralGray700,
+    surface = SurfaceAlt,
+    onSurface = TextPrimary,
     surfaceVariant = NeutralGray300,
     onSurfaceVariant = NeutralGray700,
 
@@ -53,7 +64,7 @@ fun historialMedicoSwitchColors()= SwitchDefaults.colors(
 @Composable
 fun HistorialMedicoTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
+    // Dynamic color esta disponible en Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -70,6 +81,7 @@ fun HistorialMedicoTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = AppShapes,
         content = content
     )
 }

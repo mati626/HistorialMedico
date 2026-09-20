@@ -9,6 +9,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Delete
@@ -40,6 +42,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -93,7 +97,10 @@ class MainActivity : FragmentActivity() {
             HistorialMedicoTheme {
                 var screen by remember { mutableStateOf(if (pinManager.hasPinSet()) AuthScreen.LOCKED else AuthScreen.CREATE_PIN) }
                 var errorMessage by remember { mutableStateOf<String?>(null) }
-
+                BackHandler(enabled = screen == AuthScreen.ENTER_PIN) {
+                    screen = AuthScreen.LOCKED
+                    errorMessage = null
+                }
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     when (screen) {
                         AuthScreen.AUTHENTICATED -> PerfilesScreen(
@@ -353,23 +360,39 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
 
         LazyColumn(modifier= Modifier.weight(1f)) {
             items(perfiles) { perfil ->
-                Row(
-                    modifier=Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         .clickable {
                             perfilSeleccionado = perfil
                         },
-                    verticalAlignment = Alignment.CenterVertically
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (perfil == perfilSeleccionado) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
-                    Text(
-                        "${perfil.nombre} (${perfil.relacion})",
-                        modifier= Modifier.weight(1f)
-                    )
-                    IconButton(onClick =  {
-                        perfilAEliminar=perfil
-                    }){
-                        Icon(imageVector = Icons.Filled.Delete, contentDescription = "Eliminar perfil")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${perfil.nombre} (${perfil.relacion})",
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = {
+                            perfilAEliminar = perfil
+                        }) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = "Eliminar perfil"
+                            )
+                        }
                     }
                 }
             }
