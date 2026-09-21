@@ -44,6 +44,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Tab
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -78,6 +80,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.modifier.modifierLocalConsumer
 
 enum class AuthScreen {CREATE_PIN, LOCKED, ENTER_PIN, AUTHENTICATED}
 
@@ -349,6 +352,7 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
     val scope = rememberCoroutineScope()
     var perfilSeleccionado by remember { mutableStateOf<Perfil?>(null) }
     var perfilAEliminar by remember { mutableStateOf<Perfil?>(null) }
+    var tabSeleccionado by remember { mutableStateOf(0) }
 
 
 
@@ -418,12 +422,30 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
             }
         }
         perfilSeleccionado?.let { perfil ->
-            Spacer(modifier=Modifier.height(24.dp))
-            MedicamentosSection(dao=medicamentoDao,perfil=perfil)
             Spacer(modifier= Modifier.height(24.dp))
-            HorasMedicasSection(dao=horaMedicaDao,perfil=perfil)
-            Spacer(modifier= Modifier.height(24.dp))
-            ExamenesSection(dao = examenDao,perfil=perfil)
+            TabRow(selectedTabIndex = tabSeleccionado) {
+                Tab(
+                    selected = tabSeleccionado==0,
+                    onClick = {tabSeleccionado=0},
+                    text = {Text("Medicamentos")}
+                )
+                Tab(
+                    selected = tabSeleccionado==1,
+                    onClick = {tabSeleccionado=1},
+                    text = {Text("Horas Medicas")}
+                )
+                Tab(
+                    selected = tabSeleccionado==2,
+                    onClick = {tabSeleccionado=2},
+                    text = {Text("Examenes")}
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            when(tabSeleccionado){
+                0->MedicamentosSection(dao=medicamentoDao, perfil = perfil)
+                1->HorasMedicasSection(dao=horaMedicaDao,perfil=perfil)
+                2->ExamenesSection(dao = examenDao, perfil = perfil)
+            }
         }
         perfilAEliminar?.let { perfil -> AlertDialog(
             onDismissRequest = {perfilAEliminar=null},
