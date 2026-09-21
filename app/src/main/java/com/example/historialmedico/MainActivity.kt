@@ -365,6 +365,16 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
         Spacer(modifier= Modifier.height(16.dp))
 
         LazyColumn(modifier= Modifier.weight(1f)) {
+            if(perfiles.isEmpty()){
+                item{
+                    Text(
+                        "No hay perfiles todavia,agrega uno abajo",
+                        style=MaterialTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier=Modifier.padding(vertical = 16.dp)
+                    )
+                }
+            }
             items(perfiles) { perfil ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -387,15 +397,23 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "${perfil.nombre} (${perfil.relacion})",
-                            modifier = Modifier.weight(1f)
-                        )
+                        Column(modifier=Modifier.weight(1f)) {
+                            Text(
+                                perfil.nombre,
+                                style=MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                perfil.relacion,
+                                style= MaterialTheme.typography.bodySmall,
+                                color= MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         IconButton(onClick = {
-                            perfilAEliminar = perfil
+                            perfilAEliminar=perfil
                         }) {
                             Icon(
-                                imageVector = Icons.Filled.Delete,
+                                imageVector= Icons.Filled.Delete,
                                 contentDescription = "Eliminar perfil"
                             )
                         }
@@ -403,34 +421,42 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
                 }
             }
         }
+        Card(
+            modifier=Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            border = BorderStroke(1.dp,MaterialTheme.colorScheme.outline)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             OutlinedTextField(
-                value=nombre,
-                onValueChange = {nombre= it},
-                label = {Text("Nombre")},
-                modifier= Modifier.fillMaxWidth()
-            )
-            Spacer(modifier= Modifier.height(8.dp))
-            OutlinedTextField(
-                value=relacion,
-                onValueChange = {relacion=it},
-                label={Text("Relacion (ej:Yo, Hijo/a, Padre)")},
-                modifier= Modifier.fillMaxWidth()
+                value = nombre,
+                onValueChange = { nombre = it },
+                label = { Text("Nombre") },
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick={
-                if(nombre.isNotBlank()&& relacion.isNotBlank()){
-                    val nombreAGuardar=nombre
-                    val relacionAGuardar=relacion
-                    nombre = ""
-                    relacion= ""
-                    scope.launch {
-                        dao.insert(Perfil(nombre=nombreAGuardar, relacion = relacionAGuardar))
+            OutlinedTextField(
+                value = relacion,
+                onValueChange = { relacion = it },
+                label = { Text("Relacion (ej:Yo, Hijo/a, Padre)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    if (nombre.isNotBlank() && relacion.isNotBlank()) {
+                        val nombreAGuardar = nombre
+                        val relacionAGuardar = relacion
+                        nombre = ""
+                        relacion = ""
+                        scope.launch {
+                            dao.insert(Perfil(nombre = nombreAGuardar, relacion = relacionAGuardar))
+                        }
                     }
-                }
-            },
-                modifier= Modifier.fillMaxWidth()
-                ) {
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Agregar")
+            }
+        }
             }
 
         perfilSeleccionado?.let { perfil ->
