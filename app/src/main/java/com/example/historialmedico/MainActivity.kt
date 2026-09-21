@@ -349,6 +349,7 @@ fun PinEntryScreen(
 fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao: HoraMedicaDao, examenDao: ExamenDao, modifier: Modifier=Modifier){
     val perfiles by dao.getAll().collectAsState(initial = emptyList())
     var nombre by remember { mutableStateOf("") }
+    var relacion by remember {mutableStateOf("")}
     val scope = rememberCoroutineScope()
     var perfilSeleccionado by remember { mutableStateOf<Perfil?>(null) }
     var perfilAEliminar by remember { mutableStateOf<Perfil?>(null) }
@@ -402,25 +403,36 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
                 }
             }
         }
-        Row(verticalAlignment= Alignment.CenterVertically){
             OutlinedTextField(
                 value=nombre,
                 onValueChange = {nombre= it},
                 label = {Text("Nombre")},
-                modifier= Modifier.weight(1f)
+                modifier= Modifier.fillMaxWidth()
             )
-            Spacer(modifier= Modifier.width(8.dp))
+            Spacer(modifier= Modifier.height(8.dp))
+            OutlinedTextField(
+                value=relacion,
+                onValueChange = {relacion=it},
+                label={Text("Relacion (ej:Yo, Hijo/a, Padre)")},
+                modifier= Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Button(onClick={
-                if(nombre.isNotBlank()){
-                    scope.launch {
-                        dao.insert(Perfil(nombre=nombre,relacion="Yo"))
-                    }
+                if(nombre.isNotBlank()&& relacion.isNotBlank()){
+                    val nombreAGuardar=nombre
+                    val relacionAGuardar=relacion
                     nombre = ""
+                    relacion= ""
+                    scope.launch {
+                        dao.insert(Perfil(nombre=nombreAGuardar, relacion = relacionAGuardar))
+                    }
                 }
-            }) {
+            },
+                modifier= Modifier.fillMaxWidth()
+                ) {
                 Text("Agregar")
             }
-        }
+
         perfilSeleccionado?.let { perfil ->
             Spacer(modifier= Modifier.height(24.dp))
             TabRow(selectedTabIndex = tabSeleccionado) {
