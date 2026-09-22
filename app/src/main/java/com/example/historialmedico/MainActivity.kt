@@ -83,7 +83,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.modifier.modifierLocalConsumer
 
 enum class AuthScreen {CREATE_PIN, LOCKED, ENTER_PIN, AUTHENTICATED}
-
+//Demo CI/CD - HistorialMedico
 class MainActivity : FragmentActivity() {
 
     private lateinit var biometricAuthManager: BiometricAuthManager
