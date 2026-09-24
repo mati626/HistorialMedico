@@ -794,7 +794,7 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ){
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
