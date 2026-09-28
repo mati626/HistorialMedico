@@ -4,7 +4,7 @@ Aplicación móvil diseñada para el registro, organización y seguimiento de la
 
 ## Stack Tecnológico
 
-- **Kotlin** + Jetpack Compose (interfaz de usuario)
+- **Kotlin** + **Jetpack Compose** (interfaz de usuario)
 - **Room** - persistencia local (base de datos SQLite en el dispositivo)
 - **BiometricPrompt** + **EncryptedSharedPreferences** - autenticación y seguridad local
 - **ML Kit Document Scanner** - escaneo y adjunto de documentos (examenes medicos)
