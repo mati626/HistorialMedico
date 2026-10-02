@@ -21,5 +21,7 @@ data class Medicamento(
     @PrimaryKey(autoGenerate = true) val id: Long=0,
     val perfilId: Long,
     val nombre: String,
-    val dosis: String
+    val dosis: String,
+    val documentoUri: String?=null,
+    val horaRecordatorio: String?=null
 )

@@ -1,5 +1,12 @@
 package com.example.historialmedico.ui.historial
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.result.IntentSenderRequest
+import androidx.core.content.FileProvider
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,12 +38,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Perfil
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.launch
+import java.io.File
+
 
 @Composable
 fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
@@ -46,6 +59,31 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
     var dosis by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val context= LocalContext.current
+    val activity= context as Activity
+    var documentoUri by remember { mutableStateOf<String?>(null) }
+
+    val scannerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { activityResult ->
+        if(activityResult.resultCode== Activity.RESULT_OK){
+            val resultado= GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
+            val paginas = resultado?.pages
+            if(!paginas.isNullOrEmpty()){
+                documentoUri=paginas[0].imageUri.toString()
+            }
+        }
+    }
+
+
+    val scannerOptions= GmsDocumentScannerOptions.Builder()
+        .setGalleryImportAllowed(false)
+        .setPageLimit(1)
+        .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+        .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+        .build()
+
+    val scanner= GmsDocumentScanning.getClient(scannerOptions)
 
     Column(modifier = Modifier
         .fillMaxWidth()
@@ -68,6 +106,22 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                     modifier = Modifier.fillMaxWidth()
                         .padding(12.dp), verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if(medicamento.documentoUri!=null){
+                        TextButton(onClick = {
+                            val archivo= File(Uri.parse(medicamento.documentoUri).path!!)
+                            val contentUri= FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",archivo
+                            )
+                            val intent=Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(contentUri,"image/*")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(intent)
+                        }) {
+                            Text("Ver Receta")
+                        }
+                    }
                     Text(
                         if (medicamento.dosis.isBlank()) medicamento.nombre
                         else "${medicamento.nombre}- ${medicamento.dosis}",
@@ -105,6 +159,7 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
             )
         }
 
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = nombre,
@@ -120,6 +175,18 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                 modifier = Modifier.weight(1f)
             )
         }
+        Spacer(modifier= Modifier.height(8.dp))
+        Button(onClick = {
+            scanner.getStartScanIntent(activity)
+                .addOnSuccessListener { intentSender -> scannerLauncher
+                    .launch(IntentSenderRequest.Builder(intentSender).build())
+                }
+                .addOnFailureListener {
+                    error="No se logro abrir el escaner"
+                }
+        }) {
+            Text(if(documentoUri==null)"Escanear Receta" else "Receta escaneada (volver a escanear)")
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             when{
@@ -131,15 +198,18 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                 else->{
                     val nombreAGuardar=nombre.trim()
                     val dosisAGuardar=dosis.trim()
+                    val documentoAGuardar=documentoUri
                     nombre=""
                     dosis=""
+                    documentoUri=null
                     error=null
                     scope.launch {
                         dao.insert(
                             Medicamento(
                                 perfilId = perfil.id,
                                 nombre = nombreAGuardar,
-                                dosis=dosisAGuardar
+                                dosis=dosisAGuardar,
+                                documentoUri = documentoAGuardar
                             )
                         )
                     }
