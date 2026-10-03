@@ -11,6 +11,9 @@ interface MedicamentoDao {
     @Query("SELECT * FROM medicamentos WHERE perfilId=:perfilId ORDER BY nombre ASC")
     fun getByPerfil(perfilId: Long): Flow<List<Medicamento>>
 
+    @Query("SELECT * FROM medicamentos WHERE horaRecordatorio IS NOT NULL")
+    suspend fun getConRecordatorio(): List<Medicamento>
+
     @Insert
     suspend fun insert(medicamento: Medicamento): Long
 

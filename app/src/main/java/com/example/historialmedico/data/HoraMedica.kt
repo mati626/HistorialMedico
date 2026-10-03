@@ -23,5 +23,6 @@ data class HoraMedica(
     val perfilId: Long,
     val especialidad: String,
     val fecha: String,
-    val lugar: String
+    val lugar: String,
+    val recordatorioMillis: Long?=null
 )

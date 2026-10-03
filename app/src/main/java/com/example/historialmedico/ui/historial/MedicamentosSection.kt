@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Perfil
+import com.example.historialmedico.alarms.AlarmScheduler
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -57,6 +58,7 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
     var medicamentoAEliminar by remember{mutableStateOf<Medicamento?>(null)}
     var nombre by remember { mutableStateOf("") }
     var dosis by remember { mutableStateOf("") }
+    var horaRecordatorio by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context= LocalContext.current
@@ -123,8 +125,11 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                         }
                     }
                     Text(
-                        if (medicamento.dosis.isBlank()) medicamento.nombre
-                        else "${medicamento.nombre}- ${medicamento.dosis}",
+                        buildString {
+                            append(if(medicamento.dosis.isBlank())
+                                medicamento.nombre else "${medicamento.nombre}- ${medicamento.dosis}")
+                            if (medicamento.horaRecordatorio!=null) append(" (recordatorio ${medicamento.horaRecordatorio})")
+                        },
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { medicamentoAEliminar = medicamento }) {
@@ -143,6 +148,9 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                 text = { Text("Seguro que quieres eliminar ${medicamento.nombre}?") },
                 confirmButton = {
                     TextButton(onClick = {
+                        if (medicamento.horaRecordatorio!=null){
+                            AlarmScheduler.cancelarRecordatorioMedicamento(context,medicamento.id)
+                        }
                         scope.launch { dao.delete(medicamento) }
                         medicamentoAEliminar = null
                     }) {
@@ -175,47 +183,53 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                 modifier = Modifier.weight(1f)
             )
         }
+        Spacer(modifier=Modifier.height(8.dp))
+            OutlinedTextField(
+                value=horaRecordatorio,
+                onValueChange = { horaRecordatorio=it},
+                label={Text("Recordatorio diario (opcional, ej: 08:00)")},
+                modifier = Modifier.fillMaxWidth()
+            )
+
         Spacer(modifier= Modifier.height(8.dp))
-        Button(onClick = {
-            scanner.getStartScanIntent(activity)
-                .addOnSuccessListener { intentSender -> scannerLauncher
-                    .launch(IntentSenderRequest.Builder(intentSender).build())
-                }
-                .addOnFailureListener {
-                    error="No se logro abrir el escaner"
-                }
-        }) {
-            Text(if(documentoUri==null)"Escanear Receta" else "Receta escaneada (volver a escanear)")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = {
+        Button(onClick =  {
+            val horaTrim=horaRecordatorio.trim()
+            val horaValida=horaTrim.isBlank()||
+                    Regex("^([01]\\d|2[0-3]):([0-5]\\d)$").matches(horaTrim)
             when{
                 nombre.isBlank()->error="El nombre del medicamento es obligatorio"
                 dosis.isBlank()->error="La dosis es obligatoria"
-                !dosis.any{it.isDigit()}->error="La dosis debe incluir un numero (ej:500mg)"
+                !dosis.any{it.isDigit()}->error="La dosis debe incluir un numero (ej:500 mg)"
+                !horaValida->error="La hora del recordatorio debe tener un formato HH:mm (ej:08:00)"
                 medicamentos.size>=MAX_MEDICAMENTOS_POR_PERFIL->error="Este perfil ya tiene el maximo de $MAX_MEDICAMENTOS_POR_PERFIL medicamentos"
-                medicamentos.any{it.nombre.trim().equals(nombre.trim(),ignoreCase = true)}->error="Ya existe un medicamento con ese nombre para este perfil"
+                medicamentos.any{it.nombre.trim().equals(nombre.trim(), ignoreCase = true)}->error="Ya existe un medicamento con ese nombre para este perfil"
                 else->{
-                    val nombreAGuardar=nombre.trim()
-                    val dosisAGuardar=dosis.trim()
-                    val documentoAGuardar=documentoUri
-                    nombre=""
-                    dosis=""
-                    documentoUri=null
-                    error=null
-                    scope.launch {
-                        dao.insert(
-                            Medicamento(
-                                perfilId = perfil.id,
-                                nombre = nombreAGuardar,
-                                dosis=dosisAGuardar,
-                                documentoUri = documentoAGuardar
-                            )
+                val nombreAGuardar=nombre.trim()
+                val dosisAGuardar=dosis.trim()
+                val documentoAGuardar=documentoUri
+                val horaAGuardar=if(horaTrim.isBlank())null else horaTrim
+                nombre=""
+                dosis=""
+                horaRecordatorio=""
+                documentoUri=null
+                error=null
+                scope.launch {
+                    val id=dao.insert(
+                        Medicamento(
+                            perfilId = perfil.id,
+                            nombre = nombreAGuardar,
+                            dosis = dosisAGuardar,
+                            documentoUri = documentoAGuardar,
+                            horaRecordatorio = horaAGuardar
                         )
+                    )
+                    if(horaAGuardar!=null){
+                        AlarmScheduler.programarRecordatorioMedicamento(context,id,nombreAGuardar,horaAGuardar)
                     }
                 }
             }
-        }) {
+            }
+        }){
             Text("Agregar Medicamento")
         }
         error?.let {

@@ -31,22 +31,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.HoraMedica
 import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.Perfil
+import com.example.historialmedico.alarms.AlarmScheduler
+import java.text.SimpleDateFormat
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 @Composable
 fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
     val horas by dao.getByPerfil(perfil.id).collectAsState(initial =
         emptyList())
+    var recordatorio by remember { mutableStateOf("") }
     var especialidad by remember { mutableStateOf("") }
     var fecha by remember { mutableStateOf("") }
     var lugar by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var horaAEliminar by remember { mutableStateOf<HoraMedica?>(null) }
     var scope = rememberCoroutineScope()
+    val context=LocalContext.current
 
     Column(modifier =
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
@@ -68,7 +74,10 @@ fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "${hora.especialidad}-${hora.fecha} (${hora.lugar})",
+                        buildString {
+                            append("${hora.especialidad}-${hora.fecha} (${hora.lugar})")
+                            if(hora.recordatorioMillis!=null) append(" [recordatorio activo]")
+                        },
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { horaAEliminar = hora }) {
@@ -88,6 +97,9 @@ fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
                 text = {Text("Seguro que quiere eliminar esta hora medica?")},
                 confirmButton={
                     TextButton(onClick = {
+                        if(hora.recordatorioMillis!=null){
+                            AlarmScheduler.cancelarRecordatorioHoraMedica(context,hora.id)
+                        }
                         scope.launch { dao.delete(hora) }
                         horaAEliminar=null
                     }){
@@ -121,13 +133,28 @@ fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
             label = {Text("Lugar")},
             modifier = Modifier.fillMaxWidth()
         )
+        OutlinedTextField(
+            value = recordatorio,
+            onValueChange = {recordatorio=it},
+            label = {Text("Recordatorio (opcional, ej: 18/09/2026 09:30)")},
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(onClick ={
+            val recordatorioTrim=recordatorio.trim()
+            val formato= SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es","CL"))
+            formato.isLenient=false
+            val recordatorioMillis=if(recordatorioTrim.isBlank()) null else try {
+                formato.parse(recordatorioTrim)?.time
+            }catch (e: Exception){
+                null
+            }
             when {
                 especialidad.isBlank() -> error = "La especialidad es obligatoria"
                 fecha.isBlank() -> error = "La fecha es obligatoria"
                 lugar.isBlank() -> error = "El lugar es obligatorio"
+                recordatorioTrim.isNotBlank() && recordatorioMillis==null -> error ="El recordatorio debe tener formato dd/MM/yyyy HH:mm (ej: 18/09/2026 09:30)"
                 else -> {
                     val especialidadAGuardar = especialidad.trim()
                     val fechaAGuardar = fecha.trim()
@@ -135,16 +162,21 @@ fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
                     especialidad = ""
                     fecha = ""
                     lugar = ""
+                    recordatorio= ""
                     error = null
                     scope.launch {
-                        dao.insert(
+                        val id=dao.insert(
                             HoraMedica(
                                 perfilId = perfil.id,
                                 especialidad = especialidadAGuardar,
                                 fecha = fechaAGuardar,
-                                lugar = lugarAGuardar
+                                lugar = lugarAGuardar,
+                                recordatorioMillis = recordatorioMillis
                             )
                         )
+                        if(recordatorioMillis!=null){
+                            AlarmScheduler.programarRecordatorioHoraMedica(context,id,especialidadAGuardar,lugarAGuardar,recordatorioMillis)
+                        }
                     }
                 }
             }

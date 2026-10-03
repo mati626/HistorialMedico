@@ -11,6 +11,9 @@ interface HoraMedicaDao {
     @Query("SELECT * FROM horas_medicas WHERE perfilId = :perfilId ORDER BY fecha ASC")
     fun getByPerfil(perfilId: Long): Flow<List<HoraMedica>>
 
+    @Query("SELECT * FROM horas_medicas WHERE recordatorioMillis IS NOT NULL")
+    suspend fun getConRecordatorio(): List<HoraMedica>
+
     @Insert
     suspend fun insert(horaMedica: HoraMedica): Long
     @Delete
