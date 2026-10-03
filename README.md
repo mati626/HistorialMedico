@@ -7,11 +7,21 @@ Aplicación móvil diseñada para el registro, organización y seguimiento de la
 - **Kotlin** + **Jetpack Compose** (interfaz de usuario)
 - **Room** - persistencia local (base de datos SQLite en el dispositivo)
 - **BiometricPrompt** + **EncryptedSharedPreferences** - autenticación y seguridad local
-- **ML Kit Document Scanner** - escaneo y adjunto de documentos (examenes medicos)
+- **ML Kit Document Scanner** - escaneo y adjunto de documentos (recetas medicas y examenes)
+- **AlarmManager** + **BroadcastReceiver** - recordatorios diarios de medicamentos y notificaciones previas a horas medicas
+- **PdfDocument** (API nativa de Android, sin librerias externeas) - generacion y exportacion del historial medico en PDF
 
 ## Arquitectura y Privacidad
 
 Esta aplicación almacena toda la información de forma local en el dispositivo, sin backend ni servidor externo. Esta decisión corresponde a la Ley N° 19.628, modificada por la Ley N° 21.719, que clasifica los datos de salud como datos sensibles y exige medidas de seguridad reforzadas para su tratamiento. Al mantener los datos exclusivamente en el dispositivo del usuario, se evita el tratamiento de información sensible en servidores externos.
+
+El codigo esta organizado por paquetes segun responsabilidad:
+- `ui/auth` - pantallas de bloqueo, creacion y validacion de PIN
+- `ùi/historial` - lista de perfiles, pantalla de detalle por perfil, y las secciones de Medicamentos, Horas Medicas y Examenes
+- `data` - entidades y DAOs de Room
+- `security` - biometria y manejo del PIN cifrado
+- `alarms` - programacion de recordatorios y receivers de notificaciones
+- `export` - generacion del PDF del historial
 
 ## Estrategia de Ramas (GitFlow)
 
@@ -34,12 +44,13 @@ Este proyecto sigue el modelo GitFlow:
 
 ## Estado Actual
 
-- **Autenticacion:** biometria y PIN de respaldo funcionando, con el PIN cifrado mediante EncryptedSharedPreferences (Android Keystore) - ya esta migrado.
-- **Historial medico:** funcional y probado, entidades 'Perfil', 'Medicamento', 'HoraMedica' y 'Examen' (Room), CRUD completo para cada una. Los examenes soportan escaneo y adjunto de documentos reales mediante ML Kit Document Scanner.
-- **Integracion:** 'feature/autenticacion' y 'feature/historial-medico' ya fusionadas en 'develop'- la app unifica login (biometría/PIN) y registro de historial medico en un solo flujo.
+- **Autenticacion:** biometria y PIN de respaldo funcionando, con el PIN cifrado mediante EncryptedSharedPreferences (Android Keystore).
+- **Historial medico:** funcional y probado, entidades `Perfil`, `Medicamento`, `HoraMedica` y `Examen` (Room), CRUD completo para cada una. Medicamentos y Examenes soportan escaneo y adjunto de documentos reales mediante ML Kit Document Scanner.
+- **Alarmas y recordatorios:** terminado. Recordatorio diario por hora fija para medicamentos, y recordatorio puntual (fecha y hora) para horas medicas, ambos con notificacion. Las alarmas se reprograman automaticamente si el celular se reinicia.
+- **Exportacion:** terminado. Genera un PDF con el historial completo de un perfil (medicamentos, horas medicas y examenes, incluyendo las imagenes escaneadas adjuntas) y lo comparte mediante el selector de apps del sistema.
+- **Integracion:** `feature/autenticacion`, `feature/historial-medico`, `feature/alarmas-recordatorios` y `feature/exportacion` ya fusionadas en `develop` - la app unifica login, registro de historial medico, recordatorios y exportacion en un solo flujo. `PerfilesScreen` se divide en una pantalla de lista y una pantalla de detalle por perfil, con navegacion entre ambas.
 - **CI/CD**: GitHub Actions compila el proyecto automaticamente en cada push.
-- **Alarmas y recordatorios:** pendiente
-- **Exportacion:** pendiente
+
 
 ## Licencia
 
