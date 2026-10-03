@@ -43,6 +43,10 @@ import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Perfil
 import com.example.historialmedico.data.PerfilDao
 import kotlinx.coroutines.launch
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
+import com.example.historialmedico.export.PdfExporter
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao: HoraMedicaDao, examenDao: ExamenDao, modifier: Modifier=Modifier){
@@ -50,6 +54,7 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
     var nombre by remember { mutableStateOf("") }
     var relacion by remember {mutableStateOf("")}
     val scope = rememberCoroutineScope()
+    val context=LocalContext.current
     var perfilSeleccionado by remember { mutableStateOf<Perfil?>(null) }
     var perfilAEliminar by remember { mutableStateOf<Perfil?>(null) }
     var tabSeleccionado by remember { mutableStateOf(0) }
@@ -183,6 +188,27 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
                 1->HorasMedicasSection(dao=horaMedicaDao,perfil=perfil)
                 2->ExamenesSection(dao = examenDao, perfil = perfil)
             }
+            Spacer(modifier= Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    scope.launch {
+                        val medicamentos=medicamentoDao.getByPerfil(perfil.id).first()
+                        val horasMedicas=horaMedicaDao.getByPerfil(perfil.id).first()
+                        val examenes=examenDao.getByPerfil(perfil.id).first()
+                        val uri= PdfExporter.generarPdf(context,perfil,medicamentos,horasMedicas,examenes)
+                        val intent= Intent(Intent.ACTION_SEND).apply {
+                            type="application/pdf"
+                            putExtra(Intent.EXTRA_STREAM,uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(intent,"Exportar historial"))
+                    }
+                },
+                modifier= Modifier.fillMaxWidth()
+            ) {
+                Text("Exportar PDF")
+            }
+
         }
         perfilAEliminar?.let { perfil -> AlertDialog(
             onDismissRequest = {perfilAEliminar=null},
