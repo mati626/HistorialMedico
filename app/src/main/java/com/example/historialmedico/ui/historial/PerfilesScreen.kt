@@ -22,8 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,22 +41,36 @@ import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Perfil
 import com.example.historialmedico.data.PerfilDao
 import kotlinx.coroutines.launch
-import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
-import com.example.historialmedico.export.PdfExporter
-import kotlinx.coroutines.flow.first
 
 @Composable
-fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao: HoraMedicaDao, examenDao: ExamenDao, modifier: Modifier=Modifier){
+fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao: HoraMedicaDao, examenDao: ExamenDao, modifier: Modifier=Modifier) {
+    var perfilSeleccionado by remember { mutableStateOf<Perfil?>(null) }
+    val perfil = perfilSeleccionado
+    if (perfil != null) {
+        PerfilDetalleScreen(
+            perfil = perfil,
+            medicamentoDao = medicamentoDao,
+            horaMedicaDao = horaMedicaDao,
+            examenDao = examenDao,
+            modifier = modifier,
+            onBack = { perfilSeleccionado = null }
+        )
+    } else {
+        ListaPerfilesScreen(
+            dao = dao,
+            modifier = modifier,
+            onPerfilClick = { perfilSeleccionado = it }
+        )
+    }
+}
+
+@Composable
+private fun ListaPerfilesScreen(dao: PerfilDao,modifier: Modifier= Modifier, onPerfilClick:(Perfil)-> Unit){
     val perfiles by dao.getAll().collectAsState(initial = emptyList())
     var nombre by remember { mutableStateOf("") }
-    var relacion by remember {mutableStateOf("")}
-    val scope = rememberCoroutineScope()
-    val context=LocalContext.current
-    var perfilSeleccionado by remember { mutableStateOf<Perfil?>(null) }
+    var relacion by remember { mutableStateOf("") }
+    val scope=rememberCoroutineScope()
     var perfilAEliminar by remember { mutableStateOf<Perfil?>(null) }
-    var tabSeleccionado by remember { mutableStateOf(0) }
-
 
 
     Column(modifier=modifier
@@ -83,14 +95,10 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         .clickable {
-                            perfilSeleccionado = perfil
+                            onPerfilClick(perfil)
                         },
                     colors = CardDefaults.cardColors(
-                        containerColor = if (perfil == perfilSeleccionado) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        }
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
@@ -152,7 +160,12 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
                             nombre = ""
                             relacion = ""
                             scope.launch {
-                                dao.insert(Perfil(nombre = nombreAGuardar, relacion = relacionAGuardar))
+                                dao.insert(
+                                    Perfil(
+                                        nombre = nombreAGuardar,
+                                        relacion = relacionAGuardar
+                                    )
+                                )
                             }
                         }
                     },
@@ -161,54 +174,6 @@ fun PerfilesScreen(dao: PerfilDao, medicamentoDao: MedicamentoDao,horaMedicaDao:
                     Text("Agregar")
                 }
             }
-        }
-
-        perfilSeleccionado?.let { perfil ->
-            Spacer(modifier= Modifier.height(24.dp))
-            TabRow(selectedTabIndex = tabSeleccionado) {
-                Tab(
-                    selected = tabSeleccionado==0,
-                    onClick = {tabSeleccionado=0},
-                    text = {Text("Medicamentos")}
-                )
-                Tab(
-                    selected = tabSeleccionado==1,
-                    onClick = {tabSeleccionado=1},
-                    text = {Text("Horas Medicas")}
-                )
-                Tab(
-                    selected = tabSeleccionado==2,
-                    onClick = {tabSeleccionado=2},
-                    text = {Text("Examenes")}
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            when(tabSeleccionado){
-                0->MedicamentosSection(dao=medicamentoDao, perfil = perfil)
-                1->HorasMedicasSection(dao=horaMedicaDao,perfil=perfil)
-                2->ExamenesSection(dao = examenDao, perfil = perfil)
-            }
-            Spacer(modifier= Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    scope.launch {
-                        val medicamentos=medicamentoDao.getByPerfil(perfil.id).first()
-                        val horasMedicas=horaMedicaDao.getByPerfil(perfil.id).first()
-                        val examenes=examenDao.getByPerfil(perfil.id).first()
-                        val uri= PdfExporter.generarPdf(context,perfil,medicamentos,horasMedicas,examenes)
-                        val intent= Intent(Intent.ACTION_SEND).apply {
-                            type="application/pdf"
-                            putExtra(Intent.EXTRA_STREAM,uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(Intent.createChooser(intent,"Exportar historial"))
-                    }
-                },
-                modifier= Modifier.fillMaxWidth()
-            ) {
-                Text("Exportar PDF")
-            }
-
         }
         perfilAEliminar?.let { perfil -> AlertDialog(
             onDismissRequest = {perfilAEliminar=null},

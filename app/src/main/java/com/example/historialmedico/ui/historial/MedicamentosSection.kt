@@ -190,7 +190,18 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                 label={Text("Recordatorio diario (opcional, ej: 08:00)")},
                 modifier = Modifier.fillMaxWidth()
             )
-
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = {
+            scanner.getStartScanIntent(activity)
+                .addOnSuccessListener{ intentSender -> scannerLauncher
+                    .launch(IntentSenderRequest.Builder(intentSender).build())
+                }
+                .addOnFailureListener {
+                    error="No se logro abrir el escaner"
+                }
+        }) {
+            Text(if(documentoUri==null)"Escanear Receta" else "Receta escaneada (volver a escanear)")
+        }
         Spacer(modifier= Modifier.height(8.dp))
         Button(onClick =  {
             val horaTrim=horaRecordatorio.trim()

@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.core.content.FileProvider
 import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.HoraMedica
@@ -45,6 +47,38 @@ object PdfExporter{
             }
         }
 
+        fun dibujarImagenSiExiste(uriString: String?) {
+            if (uriString == null) return
+            val bitmap = try {
+                context.contentResolver.openInputStream(Uri.parse(uriString))?.use { stream ->
+                    BitmapFactory.decodeStream(stream)
+                }
+            } catch (e: Exception) {
+                null
+            } ?: return
+
+            val anchoFinal = 500f
+            val escala = anchoFinal / bitmap.width
+            val altoFinal = bitmap.height * escala
+
+            if (y + altoFinal > altoMaximo) {
+                documento.finishPage(pagina)
+                numeroPagina++
+                paginaInfo = PdfDocument.PageInfo.Builder(595, 842, numeroPagina).create()
+                pagina = documento.startPage(paginaInfo)
+                canvas = pagina.canvas
+                y = 40f
+            }
+
+            val destino = android.graphics.RectF(
+                margenIzquierdo,
+                y,
+                margenIzquierdo + anchoFinal,
+                y + altoFinal
+            )
+            canvas.drawBitmap(bitmap, null, destino, null)
+            y += altoFinal + 12f
+        }
         canvas.drawText("Historial Medico -${perfil.nombre}",margenIzquierdo, y, paintTitulo)
         y+=24f
         canvas.drawText("Relacion: ${perfil.relacion}",margenIzquierdo,y,painTexto)
@@ -61,6 +95,7 @@ object PdfExporter{
                     "${medicamento.nombre}-${medicamento.dosis}"
                 canvas.drawText("- $texto",margenIzquierdo,y,painTexto)
                 y+=18f
+                dibujarImagenSiExiste(medicamento.documentoUri)
             }
         }
         y+=12f
@@ -92,6 +127,7 @@ object PdfExporter{
                 canvas.drawText("-${examen.tipo}-${examen.fecha}(${examen.resultado})",
                     margenIzquierdo, y,painTexto)
                 y+=18f
+                dibujarImagenSiExiste(examen.documentoUri)
         }
     }
         documento.finishPage(pagina)
