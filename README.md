@@ -17,7 +17,7 @@ Esta aplicación almacena toda la información de forma local en el dispositivo,
 
 El codigo esta organizado por paquetes segun responsabilidad:
 - `ui/auth` - pantallas de bloqueo, creacion y validacion de PIN
-- `ùi/historial` - lista de perfiles, pantalla de detalle por perfil, y las secciones de Medicamentos, Horas Medicas y Examenes
+- `ui/historial` - lista de perfiles, pantalla de detalle por perfil, y las secciones de Medicamentos, Horas Medicas y Examenes
 - `data` - entidades y DAOs de Room
 - `security` - biometria y manejo del PIN cifrado
 - `alarms` - programacion de recordatorios y receivers de notificaciones
