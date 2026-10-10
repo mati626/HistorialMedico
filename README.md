@@ -13,7 +13,7 @@ Aplicación móvil diseñada para el registro, organización y seguimiento de la
 
 ## Arquitectura y Privacidad
 
-Esta aplicación almacena toda la información de forma local en el dispositivo, sin backend ni servidor externo. La decisión considera que la Ley N° 19.628, modificada por la Ley N° 21.719,  clasifica los datos de salud como datos sensibles: mantenerlos en el dispositivo evita transmitirlos o almacenarlos en servidores externos. Esto no constituye una declaración de cumplimiento normativo.
+Esta aplicación almacena toda la información de forma local en el dispositivo, sin backend ni servidor externo. La decisión considera que la Ley N° 19.628, modificada por la Ley N° 21.719, clasifica los datos de salud como datos sensibles: mantenerlos en el dispositivo evita transmitirlos o almacenarlos en servidores externos. Esto no constituye una declaración de cumplimiento normativo.
 
 Seguridad actual: el PIN se guarda como hash SHA-256 dentro de EncryptedSharedPreferences (Android Keystore). La base de datos Room **no esta cifrada** (pendiente).
 
@@ -31,7 +31,7 @@ El codigo esta organizado por paquetes segun responsabilidad:
 ## Modelo de datos
 
 La base de datos esta en la versión 7. Un **Perfil** representa al titular del dispositivo y agrupa a sus **Pacientes** (el propio titular y/o personas a su cargo). 
-De cada paciente dependen sus **Medicamentos**, **Horas Medicas**, **Exámenes** y registros de **Presión Arterial**. Los recordatorios se guardan en la tabla **Alarma** (varias por medicamento, o una por hora medica) y las tomas en **ControlToma**
+De cada paciente dependen sus **Medicamentos**, **Horas Medicas**, **Exámenes** y registros de **Presión Arterial**. Los recordatorios se guardan en la tabla **Alarma** (varias por medicamento, o una por hora medica) y las tomas en **ControlToma**.
 
 Desde la version 7 el esquema se exporta en `app/schemas` y los cambios de estructura se hacen con migraciones. El borrado destructivo queda limitado a las versiones anteriores a la 7.
 
@@ -55,7 +55,7 @@ Este proyecto sigue el modelo GitFlow:
 4. Sincronizar Gradle (opcion: Sync Now)
 5. Ejecutar en emulador o dispositivo físico con Android 7.0 (API 24) o superior
 
-# Estado Actual
+## Estado Actual
 
 - **Autenticación:** biometría y PIN de respaldo funcionando.
 - **Perfil y pacientes:** en el primer inicio se crea el perfil del titular, con la opción de registrarse también como paciente. Desde la lista se agregan y eliminan pacientes.
@@ -76,4 +76,4 @@ Este proyecto sigue el modelo GitFlow:
 
 ## Licencia
 
-Este proyecto usa licencia MIT, -ver archivo [LICENSE](LICENSE)
+Este proyecto usa licencia MIT, ver archivo [LICENSE](LICENSE)
