@@ -4,28 +4,28 @@ import android.content.Context
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.core.content.FileProvider
 import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.HoraMedica
 import com.example.historialmedico.data.Medicamento
-import com.example.historialmedico.data.Perfil
+import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.util.Fechas
 import java.io.File
 import java.io.FileOutputStream
 
 object PdfExporter{
     fun generarPdf(
         context: Context,
-        perfil: Perfil,
-        medicamento: List<Medicamento>,
+        paciente: Paciente,
+        medicamentos: List<Medicamento>,
         horasMedicas: List<HoraMedica>,
         examenes: List<Examen>
     ): Uri{
         val documento= PdfDocument()
         val paintTitulo= Paint().apply { textSize=20f; isFakeBoldText=true }
         val paintSubtitulo=Paint().apply { textSize=14f; isFakeBoldText=true }
-        val painTexto=Paint().apply{textSize=12f}
+        val paintTexto=Paint().apply{textSize=12f}
 
         val margenIzquierdo=40f
         val altoMaximo=800f
@@ -79,21 +79,20 @@ object PdfExporter{
             canvas.drawBitmap(bitmap, null, destino, null)
             y += altoFinal + 12f
         }
-        canvas.drawText("Historial Medico -${perfil.nombre}",margenIzquierdo, y, paintTitulo)
+        canvas.drawText("Historial Medico - ${paciente.nombre}",margenIzquierdo, y, paintTitulo)
         y+=24f
-        canvas.drawText("Relacion: ${perfil.relacion}",margenIzquierdo,y,painTexto)
+        canvas.drawText("Relacion: ${paciente.relacion}",margenIzquierdo,y,paintTexto)
         y+=30f
         canvas.drawText("Medicamentos", margenIzquierdo,y,paintSubtitulo)
         y+=20f
-        if(medicamento.isEmpty()){
-            canvas.drawText("Sin medicamentos registrados",margenIzquierdo,y,painTexto)
+        if(medicamentos.isEmpty()){
+            canvas.drawText("Sin medicamentos registrados",margenIzquierdo,y,paintTexto)
             y+=18f
         }else{
-            medicamento.forEach { medicamento ->
+            medicamentos.forEach { medicamento ->
                 saltoDePaginaSiNecesario()
-                val texto=if(medicamento.dosis.isBlank()) medicamento.nombre else
-                    "${medicamento.nombre}-${medicamento.dosis}"
-                canvas.drawText("- $texto",margenIzquierdo,y,painTexto)
+                val texto="${medicamento.nombre} - ${medicamento.dosis}"
+                canvas.drawText("- $texto",margenIzquierdo,y,paintTexto)
                 y+=18f
                 dibujarImagenSiExiste(medicamento.documentoUri)
             }
@@ -101,15 +100,15 @@ object PdfExporter{
         y+=12f
 
         saltoDePaginaSiNecesario()
-        canvas.drawText("Horas Medicas",margenIzquierdo,y,painTexto)
+        canvas.drawText("Horas Medicas",margenIzquierdo,y,paintSubtitulo)
         y+=20f
         if(horasMedicas.isEmpty()){
-            canvas.drawText("Sin horas medicas registradas",margenIzquierdo,y,painTexto)
+            canvas.drawText("Sin horas medicas registradas",margenIzquierdo,y,paintTexto)
             y+=18f
         }else{
             horasMedicas.forEach { hora->
                 saltoDePaginaSiNecesario()
-                canvas.drawText("-${hora.especialidad}-${hora.fecha} (${hora.lugar})",margenIzquierdo,y,painTexto)
+                canvas.drawText("- ${hora.especialidad} - ${Fechas.fechaHoraVisible(hora.fechaHora)} (${hora.lugar})",margenIzquierdo,y,paintTexto)
                 y+=18f
             }
         }
@@ -119,13 +118,19 @@ object PdfExporter{
         canvas.drawText("Examenes",margenIzquierdo,y,paintSubtitulo)
         y+=20f
         if(examenes.isEmpty()){
-            canvas.drawText("Sin examenes registrados",margenIzquierdo,y,painTexto)
+            canvas.drawText("Sin examenes registrados",margenIzquierdo,y,paintTexto)
             y+=18f
         }else{
             examenes.forEach{examen->
                 saltoDePaginaSiNecesario()
-                canvas.drawText("-${examen.tipo}-${examen.fecha}(${examen.resultado})",
-                    margenIzquierdo, y,painTexto)
+                val detalle = listOfNotNull(
+                    examen.fecha?.let { Fechas.isoAVisible(it) },
+                    examen.resultado
+                ).joinToString(" - ")
+                canvas.drawText(
+                    "- ${examen.tipo} (${examen.estado.etiqueta}) $detalle",
+                    margenIzquierdo, y, paintTexto
+                )
                 y+=18f
                 dibujarImagenSiExiste(examen.documentoUri)
         }
@@ -134,7 +139,7 @@ object PdfExporter{
 
         val carpeta=File(context.cacheDir,"pdfs")
         if(!carpeta.exists()) carpeta.mkdirs()
-        val nombreArchivo=perfil.nombre.replace(Regex("[^A-Za-z0-9]"),"_")
+        val nombreArchivo=paciente.nombre.replace(Regex("[^A-Za-z0-9]"),"_")
         val archivo=File(carpeta,"historial_$nombreArchivo.pdf")
         FileOutputStream(archivo).use { documento.writeTo(it) }
         documento.close()

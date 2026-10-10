@@ -25,20 +25,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.historialmedico.data.AlarmaDao
 import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.MedicamentoDao
-import com.example.historialmedico.data.Perfil
+import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.export.PdfExporter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 @Composable
-fun PerfilDetalleScreen(
-    perfil: Perfil,
+fun PacienteDetalleScreen(
+    paciente: Paciente,
     medicamentoDao: MedicamentoDao,
     horaMedicaDao: HoraMedicaDao,
     examenDao: ExamenDao,
+    alarmaDao: AlarmaDao,
     modifier: Modifier= Modifier,
     onBack:()-> Unit
 ){
@@ -54,15 +58,15 @@ fun PerfilDetalleScreen(
             .padding(16.dp)
     ){
         TextButton(onClick = onBack){
-            Text("< Volver a Perfiles")
+            Text("< Volver a Pacientes")
         }
         Text(
-            perfil.nombre,
+            paciente.nombre,
             style=MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
         Text(
-            perfil.relacion,
+            paciente.relacion,
             style=MaterialTheme.typography.bodyMedium,
             color= MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -71,16 +75,18 @@ fun PerfilDetalleScreen(
         Button(
             onClick = {
                 scope.launch {
-                    val medicamentos = medicamentoDao.getByPerfil(perfil.id).first()
-                    val horasMedicas = horaMedicaDao.getByPerfil(perfil.id).first()
-                    val examenes = examenDao.getByPerfil(perfil.id).first()
-                    val uri = PdfExporter.generarPdf(
-                        context,
-                        perfil,
-                        medicamentos,
-                        horasMedicas,
-                        examenes
-                    )
+                    val uri = withContext(Dispatchers.IO) {
+                        val medicamentos = medicamentoDao.getByPaciente(paciente.id).first()
+                        val horasMedicas = horaMedicaDao.getByPaciente(paciente.id).first()
+                        val examenes = examenDao.getByPaciente(paciente.id).first()
+                        PdfExporter.generarPdf(
+                            context,
+                            paciente,
+                            medicamentos,
+                            horasMedicas,
+                            examenes
+                        )
+                    }
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "application/pdf"
                         putExtra(Intent.EXTRA_STREAM, uri)
@@ -115,9 +121,9 @@ fun PerfilDetalleScreen(
         Spacer(modifier= Modifier.height(16.dp))
         Column(modifier=Modifier.weight(1f)) {
             when (tabSeleccionado) {
-                0 -> MedicamentosSection(dao = medicamentoDao, perfil = perfil)
-                1 -> HorasMedicasSection(dao = horaMedicaDao, perfil = perfil)
-                2 -> ExamenesSection(dao = examenDao, perfil = perfil)
+                0 -> MedicamentosSection(dao = medicamentoDao, alarmaDao=alarmaDao,paciente = paciente)
+                1 -> HorasMedicasSection(dao = horaMedicaDao,alarmaDao=alarmaDao, paciente = paciente)
+                2 -> ExamenesSection(dao = examenDao, paciente = paciente)
             }
         }
     }

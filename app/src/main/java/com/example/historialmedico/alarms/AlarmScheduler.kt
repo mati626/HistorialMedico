@@ -4,86 +4,53 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import com.example.historialmedico.data.Alarma
 import java.util.Calendar
 
-object AlarmScheduler{
-    fun programarRecordatorioMedicamento(context: Context,medicamentoId: Long,nombre: String, hora: String){
-        val partes=hora.split(":")
-        val horaDelDia=partes[0].toInt()
-        val minuto=partes[1].toInt()
+object AlarmScheduler {
 
-        val calendar= Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY,horaDelDia)
-            set(Calendar.MINUTE, minuto)
-            set(Calendar.SECOND,0)
-            if(before(Calendar.getInstance())){
-                add(Calendar.DAY_OF_YEAR,1)
-            }
-        }
-
-        val intent= Intent(context, RecordatorioReceiver::class.java).apply{
-            putExtra(RecordatorioReceiver.EXTRA_TITULO,"Hora de tomar tu medicamento")
-            putExtra(RecordatorioReceiver.EXTRA_MENSAJE,nombre)
-            putExtra(RecordatorioReceiver.EXTRA_TIPO, RecordatorioReceiver.TIPO_MEDICAMENTO)
-            putExtra(RecordatorioReceiver.EXTRA_MEDICAMENTO_ID, medicamentoId)
-            putExtra(RecordatorioReceiver.EXTRA_MEDICAMENTO_NOMBRE, nombre)
-            putExtra(RecordatorioReceiver.EXTRA_MEDICAMENTO_HORA, hora)
-        }
-
-        val pendingIntent= PendingIntent.getBroadcast(
-            context,
-            medicamentoId.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val alarmManager=context.getSystemService(Context.ALARM_SERVICE) as
-                AlarmManager
+    fun programar(context: Context, alarma: Alarma) {
+        if (!alarma.activo) return
+        val momento = proximoDisparo(alarma) ?: return
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.setAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
-            pendingIntent
+            momento,
+            pendingIntent(context, alarma.id)
         )
     }
 
-    fun cancelarRecordatorioMedicamento(context: Context, medicamentoId: Long){
-        val intent= Intent(context, RecordatorioReceiver::class.java)
-        val pendingIntent= PendingIntent.getBroadcast(
-            context,
-            medicamentoId.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val alarmManager=context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.cancel(pendingIntent)
+    fun cancelar(context: Context, alarmaId: Long) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(pendingIntent(context, alarmaId))
     }
 
-    fun programarRecordatorioHoraMedica(context: Context,horaMedicaId: Long, especialidad: String, lugar: String, triggerAtMillis: Long){
-        val intent= Intent(context, RecordatorioReceiver::class.java).apply {
-            putExtra(RecordatorioReceiver.EXTRA_TITULO,"Cita medica proxima")
-            putExtra(RecordatorioReceiver.EXTRA_MENSAJE,"$especialidad en $lugar")
+    private fun proximoDisparo(alarma: Alarma): Long? {
+        val ahora = System.currentTimeMillis()
+        val hora = alarma.hora
+        if (hora != null) {
+            val calendario = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, hora / 60)
+                set(Calendar.MINUTE, hora % 60)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= ahora) add(Calendar.DAY_OF_YEAR, 1)
+            }
+            return calendario.timeInMillis
         }
-
-        val pendingIntent= PendingIntent.getBroadcast(
-            context,
-            (horaMedicaId+100000).toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val alarmManager=context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        val puntual = alarma.fechaHoraMillis
+        return if (puntual != null && puntual > ahora) puntual else null
     }
 
-    fun cancelarRecordatorioHoraMedica(context: Context,horaMedicaId: Long){
-        val intent= Intent(context, RecordatorioReceiver::class.java)
-        val pendingIntent= PendingIntent.getBroadcast(
+    private fun pendingIntent(context: Context, alarmaId: Long): PendingIntent {
+        val intent = Intent(context, RecordatorioReceiver::class.java).apply {
+            putExtra(RecordatorioReceiver.EXTRA_ALARMA_ID, alarmaId)
+        }
+        return PendingIntent.getBroadcast(
             context,
-            (horaMedicaId+100000).toInt(),
+            alarmaId.toInt(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val alarmManager=context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.cancel(pendingIntent)
     }
 }

@@ -8,35 +8,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class BootReceiver: BroadcastReceiver(){
-    override fun onReceive(context: Context, intent: Intent) {
-        if(intent.action!= Intent.ACTION_BOOT_COMPLETED)return
+class BootReceiver : BroadcastReceiver() {
 
-        val pendingResult=goAsync()
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+
+        val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val dataBase= AppDataBase.getInstance(context)
-
-                val medicamentos=dataBase.medicamentoDao().getConRecordatorio()
-                medicamentos.forEach { medicamento ->
-                    val hora=medicamento.horaRecordatorio
-                    if(hora!=null){
-                        AlarmScheduler.programarRecordatorioMedicamento(
-                            context, medicamento.id, medicamento.nombre, hora
-                        )
-                    }
-                }
-
-                val horasMedicas= dataBase.horaMedicaDao().getConRecordatorio()
-                horasMedicas.forEach { hora ->
-                    val millis= hora.recordatorioMillis
-                    if(millis != null && millis> System.currentTimeMillis()){
-                        AlarmScheduler.programarRecordatorioHoraMedica(
-                            context, hora.id, hora.especialidad, hora.lugar, millis
-                        )
-                    }
-                }
-            }finally {
+                val alarmas = AppDataBase.getInstance(context).alarmaDao().getActivas()
+                alarmas.forEach { alarma -> AlarmScheduler.programar(context, alarma) }
+            } finally {
                 pendingResult.finish()
             }
         }

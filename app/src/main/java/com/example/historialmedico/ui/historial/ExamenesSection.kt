@@ -24,6 +24,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,9 +41,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.example.historialmedico.data.EstadoExamen
 import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.ExamenDao
-import com.example.historialmedico.data.Perfil
+import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.ui.components.SelectorFechaDialog
+import com.example.historialmedico.util.Fechas
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -50,10 +54,11 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
-fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
-    val examenes by dao.getByPerfil(perfil.id).collectAsState(initial = emptyList())
+fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
+    val examenes by remember(paciente.id) { dao.getByPaciente(paciente.id) }.collectAsState(initial = emptyList())
     var tipo by remember { mutableStateOf("") }
-    var fecha by remember { mutableStateOf("") }
+    var fecha by remember { mutableStateOf<String?>(null) }
+    var mostrarSelectorFecha by remember { mutableStateOf(false) }
     var resultado by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var examenAEliminar by remember { mutableStateOf<Examen?>(null) }
@@ -66,8 +71,8 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { activityResult ->
         if (activityResult.resultCode== Activity.RESULT_OK){
-            val resultado = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
-            val paginas = resultado?.pages
+            val escaneo = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
+            val paginas = escaneo?.pages
             if(!paginas.isNullOrEmpty()){
                 documentoUri=paginas[0].imageUri.toString()
             }
@@ -88,7 +93,7 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
     Column(modifier =
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         Text(
-            "Examenes de ${perfil.nombre}",
+            "Examenes de ${paciente.nombre}",
             style=MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -103,10 +108,20 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "${examen.tipo} - ${examen.fecha} (${examen.resultado})",
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("${examen.tipo} - ${examen.estado.etiqueta}")
+                        val detalle = listOfNotNull(
+                            examen.fecha?.let { Fechas.isoAVisible(it) },
+                            examen.resultado
+                        ).joinToString(" - ")
+                        if (detalle.isNotBlank()) {
+                            Text(
+                                detalle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     if (examen.documentoUri != null) {
                         TextButton(onClick = {
                             val archivo = File(Uri.parse(examen.documentoUri).path!!)
@@ -161,17 +176,31 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value=fecha,
-            onValueChange = {fecha=it},
-            label = {Text("Fecha (ej: 18/09/2026)")},
+        OutlinedButton(
+            onClick = {mostrarSelectorFecha=true},
             modifier = Modifier.fillMaxWidth()
-        )
+        ) {
+            Text(fecha?.let { "Fecha: ${Fechas.isoAVisible(it)}" } ?: "Elegir fecha (opcional)")
+        }
+        if (fecha != null) {
+            TextButton(onClick = {fecha=null}) {
+                Text("Quitar fecha")
+            }
+        }
+        if (mostrarSelectorFecha) {
+            SelectorFechaDialog(
+                onConfirmar = {
+                    fecha=Fechas.utcMillisAIso(it)
+                    mostrarSelectorFecha=false
+                },
+                onCancelar = {mostrarSelectorFecha=false}
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = resultado,
             onValueChange = {resultado=it},
-            label = {Text("Resultado")},
+            label = {Text("Resultado (opcional)")},
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -190,25 +219,29 @@ fun ExamenesSection(dao: ExamenDao,perfil: Perfil){
         Button(onClick = {
             when{
                 tipo.isBlank()->error="El tipo de examen es obligatorio"
-                fecha.isBlank()->error="La fecha es obligatoria"
-                resultado.isBlank()->error="El resultado es obligatorio"
                 else->{
                     val tipoAGuardar = tipo.trim()
-                    val fechaAGuardar = fecha.trim()
-                    val resultadoAGuardar = resultado.trim()
+                    val fechaAGuardar = fecha
+                    val resultadoAGuardar = resultado.trim().ifBlank { null }
                     val documentoAGuardar = documentoUri
+                    val estadoAGuardar = when {
+                        resultadoAGuardar != null -> EstadoExamen.REALIZADO
+                        fechaAGuardar != null -> EstadoExamen.AGENDADO
+                        else -> EstadoExamen.SOLICITADO
+                    }
                     tipo=""
-                    fecha=""
+                    fecha=null
                     resultado=""
                     documentoUri=null
                     error=null
                     scope.launch {
                         dao.insert(
                             Examen(
-                                perfilId = perfil.id,
+                                pacienteId = paciente.id,
                                 tipo = tipoAGuardar,
                                 fecha = fechaAGuardar,
                                 resultado = resultadoAGuardar,
+                                estado = estadoAGuardar,
                                 documentoUri = documentoAGuardar
                             )
                         )

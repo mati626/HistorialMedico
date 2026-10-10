@@ -25,7 +25,7 @@ import com.example.historialmedico.data.AppDataBase
 import com.example.historialmedico.ui.auth.LockScreen
 import com.example.historialmedico.ui.auth.CreatePinScreen
 import com.example.historialmedico.ui.auth.PinEntryScreen
-import com.example.historialmedico.ui.historial.PerfilesScreen
+import com.example.historialmedico.ui.historial.PacientesScreen
 enum class AuthScreen {CREATE_PIN, LOCKED, ENTER_PIN, AUTHENTICATED}
 class MainActivity : FragmentActivity() {
 
@@ -61,11 +61,13 @@ class MainActivity : FragmentActivity() {
                 }
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     when (screen) {
-                        AuthScreen.AUTHENTICATED -> PerfilesScreen(
-                            dao = database.perfilDao(),
+                        AuthScreen.AUTHENTICATED -> PacientesScreen(
+                            perfilDao = database.perfilDao(),
+                            pacienteDao = database.pacienteDao(),
                             medicamentoDao = database.medicamentoDao(),
                             horaMedicaDao = database.horaMedicaDao(),
                             examenDao = database.examenDao(),
+                            alarmaDao = database.alarmaDao(),
                             modifier = Modifier.padding(innerPadding)
                         )
                         AuthScreen.LOCKED -> LockScreen(

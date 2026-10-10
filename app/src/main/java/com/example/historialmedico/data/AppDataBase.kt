@@ -5,12 +5,24 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Perfil::class, Medicamento::class, HoraMedica::class, Examen::class],version=6, exportSchema = false)
+@Database(entities = [
+    Perfil::class,
+    Paciente::class,
+    Medicamento::class,
+    HoraMedica::class,
+    Examen::class,
+    Alarma::class,
+    PresionArterial::class,
+    ControlToma::class],
+    version=7, exportSchema = true
+)
 abstract class AppDataBase: RoomDatabase() {
     abstract fun perfilDao(): PerfilDao
+    abstract fun pacienteDao(): PacienteDao
     abstract fun medicamentoDao(): MedicamentoDao
     abstract fun horaMedicaDao(): HoraMedicaDao
     abstract fun examenDao(): ExamenDao
+    abstract fun alarmaDao(): AlarmaDao
 
     companion object {
         @Volatile private var INSTANCE: AppDataBase?=null
@@ -21,7 +33,7 @@ abstract class AppDataBase: RoomDatabase() {
                     context.applicationContext,
                     AppDataBase::class.java,
                     "historial_medico.db"
-                ).fallbackToDestructiveMigration(true).build().also { INSTANCE=it }
+                ).fallbackToDestructiveMigrationFrom(true,1,2,3,4,5,6).build().also { INSTANCE=it }
             }
     }
 }
