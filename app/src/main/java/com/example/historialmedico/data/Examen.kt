@@ -9,19 +9,27 @@ import androidx.room.PrimaryKey
     tableName = "examenes",
     foreignKeys = [
         ForeignKey(
-            entity = Perfil::class,
+            entity = Paciente::class,
             parentColumns = ["id"],
-            childColumns = ["perfilId"],
+            childColumns = ["pacienteId"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = HoraMedica::class,
+            parentColumns = ["id"],
+            childColumns = ["horaMedicaId"],
+            onDelete = ForeignKey.SET_NULL
         )
     ],
-    indices = [Index("perfilId")]
+    indices = [Index("pacienteId"), Index("horaMedicaId")]
 )
 data class Examen(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val perfilId: Long,
+    val pacienteId: Long,
+    val horaMedicaId: Long?=null,
     val tipo: String,
-    val fecha: String,
-    val resultado: String,
+    val fecha: String?=null,
+    val resultado: String?=null,
+    val estado: EstadoExamen= EstadoExamen.SOLICITADO,
     val documentoUri: String?=null
 )

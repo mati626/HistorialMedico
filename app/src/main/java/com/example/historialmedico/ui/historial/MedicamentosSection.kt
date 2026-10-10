@@ -43,7 +43,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
-import com.example.historialmedico.data.Perfil
+import com.example.historialmedico.data.Paciente
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.mutableStateListOf
+import com.example.historialmedico.data.AlarmaDao
+import com.example.historialmedico.ui.components.SelectorHoraDialog
+import com.example.historialmedico.util.Fechas
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import com.example.historialmedico.alarms.AlarmScheduler
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
@@ -53,15 +60,19 @@ import java.io.File
 
 
 @Composable
-fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
-    val medicamentos by dao.getByPerfil(perfil.id).collectAsState(initial = emptyList())
+fun MedicamentosSection (dao: MedicamentoDao,alarmaDao: AlarmaDao,paciente: Paciente) {
+    val medicamentos by remember(paciente.id) { dao.getByPaciente(paciente.id) }.collectAsState(initial = emptyList())
+    val alarmas by remember(paciente.id) {alarmaDao.getDeMedicamentos(paciente.id)} .collectAsState(initial = emptyList())
+    val alarmasPorMedicamento =alarmas.groupBy { it.medicamentoId }
     var medicamentoAEliminar by remember{mutableStateOf<Medicamento?>(null)}
     var nombre by remember { mutableStateOf("") }
     var dosis by remember { mutableStateOf("") }
-    var horaRecordatorio by remember { mutableStateOf("") }
+    val horas = remember { mutableStateListOf<Int>() }
+    var mostrarSelectorHora by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context= LocalContext.current
+    val appContext=context.applicationContext
     val activity= context as Activity
     var documentoUri by remember { mutableStateOf<String?>(null) }
 
@@ -91,7 +102,7 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
         .fillMaxWidth()
         .verticalScroll(rememberScrollState())) {
         Text(
-            "Medicamentos de ${perfil.nombre}", style = MaterialTheme.typography.titleMedium,
+            "Medicamentos de ${paciente.nombre}", style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -124,14 +135,22 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                             Text("Ver Receta")
                         }
                     }
-                    Text(
-                        buildString {
-                            append(if(medicamento.dosis.isBlank())
-                                medicamento.nombre else "${medicamento.nombre}- ${medicamento.dosis}")
-                            if (medicamento.horaRecordatorio!=null) append(" (recordatorio ${medicamento.horaRecordatorio})")
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("${medicamento.nombre} - ${medicamento.dosis}")
+                            val alarmasDelMedicamento =
+                                alarmasPorMedicamento[medicamento.id].orEmpty()
+                            if (alarmasDelMedicamento.isNotEmpty()) {
+                                Text(
+                                    "Recordatorios: " + alarmasDelMedicamento
+                                    .mapNotNull { it.hora }
+                                    .joinToString(", ") {
+                                        Fechas.minutosAHora(it)
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     IconButton(onClick = { medicamentoAEliminar = medicamento }) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
@@ -148,8 +167,7 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
                 text = { Text("Seguro que quieres eliminar ${medicamento.nombre}?") },
                 confirmButton = {
                     TextButton(onClick = {
-                        if (medicamento.horaRecordatorio!=null){
-                            AlarmScheduler.cancelarRecordatorioMedicamento(context,medicamento.id)
+                        alarmasPorMedicamento[medicamento.id].orEmpty().forEach { alarma-> AlarmScheduler.cancelar(appContext, alarma.id)
                         }
                         scope.launch { dao.delete(medicamento) }
                         medicamentoAEliminar = null
@@ -184,12 +202,31 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
             )
         }
         Spacer(modifier=Modifier.height(8.dp))
-            OutlinedTextField(
-                value=horaRecordatorio,
-                onValueChange = { horaRecordatorio=it},
-                label={Text("Recordatorio diario (opcional, ej: 08:00)")},
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                "Recordatorios diarios (opcional)",
+                style = MaterialTheme.typography.bodyMedium
             )
+            horas.sorted().forEach { hora ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(Fechas.minutosAHora(hora), modifier = Modifier.weight(1f))
+                    TextButton(onClick = {horas.remove(hora)}) {
+                        Text("Quitar")
+                    }
+                }
+            }
+        OutlinedButton(onClick = {mostrarSelectorHora=true}) {
+            Text("Agregar hora")
+        }
+        if(mostrarSelectorHora){
+            SelectorHoraDialog(
+                onConfirmar = {hora, minuto ->
+                    val minutos = hora * 60+minuto
+                    if (minutos !in horas) horas.add(minutos)
+                    mostrarSelectorHora=false
+                },
+                onCancelar = {mostrarSelectorHora=false}
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             scanner.getStartScanIntent(activity)
@@ -203,44 +240,37 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
             Text(if(documentoUri==null)"Escanear Receta" else "Receta escaneada (volver a escanear)")
         }
         Spacer(modifier= Modifier.height(8.dp))
-        Button(onClick =  {
-            val horaTrim=horaRecordatorio.trim()
-            val horaValida=horaTrim.isBlank()||
-                    Regex("^([01]\\d|2[0-3]):([0-5]\\d)$").matches(horaTrim)
+        Button(onClick = {
             when{
                 nombre.isBlank()->error="El nombre del medicamento es obligatorio"
                 dosis.isBlank()->error="La dosis es obligatoria"
-                !dosis.any{it.isDigit()}->error="La dosis debe incluir un numero (ej:500 mg)"
-                !horaValida->error="La hora del recordatorio debe tener un formato HH:mm (ej:08:00)"
-                medicamentos.size>=MAX_MEDICAMENTOS_POR_PERFIL->error="Este perfil ya tiene el maximo de $MAX_MEDICAMENTOS_POR_PERFIL medicamentos"
-                medicamentos.any{it.nombre.trim().equals(nombre.trim(), ignoreCase = true)}->error="Ya existe un medicamento con ese nombre para este perfil"
+                !dosis.any {it.isDigit()}->error="La dosis debe incluir un numero (ej: 500 mg)"
+                medicamentos.size>=MAX_MEDICAMENTOS_POR_PACIENTE->error="Este paciente ya tiene el maximo de $MAX_MEDICAMENTOS_POR_PACIENTE medicamentos"
+                medicamentos.any{it.nombre.trim().equals(nombre.trim(), ignoreCase = true)}->error="Ya existe un medicamento con ese nombre para este paciente"
                 else->{
-                val nombreAGuardar=nombre.trim()
-                val dosisAGuardar=dosis.trim()
-                val documentoAGuardar=documentoUri
-                val horaAGuardar=if(horaTrim.isBlank())null else horaTrim
-                nombre=""
-                dosis=""
-                horaRecordatorio=""
-                documentoUri=null
-                error=null
-                scope.launch {
-                    val id=dao.insert(
-                        Medicamento(
-                            perfilId = perfil.id,
-                            nombre = nombreAGuardar,
-                            dosis = dosisAGuardar,
-                            documentoUri = documentoAGuardar,
-                            horaRecordatorio = horaAGuardar
-                        )
+                    val medicamento= Medicamento(
+                        pacienteId = paciente.id,
+                        nombre  =nombre.trim(),
+                        dosis=dosis.trim(),
+                        documentoUri=documentoUri
                     )
-                    if(horaAGuardar!=null){
-                        AlarmScheduler.programarRecordatorioMedicamento(context,id,nombreAGuardar,horaAGuardar)
+                    val horasAguardar=horas.toList()
+                    nombre=""
+                    dosis=""
+                    horas.clear()
+                    documentoUri=null
+                    error=null
+                    scope.launch {
+                        withContext(NonCancellable){
+                            val alarmasCreadas=dao.insertConAlarmas(medicamento,horasAguardar)
+                            alarmasCreadas.forEach {
+                                AlarmScheduler.programar(appContext,it)
+                            }
+                        }
                     }
                 }
             }
-            }
-        }){
+        }) {
             Text("Agregar Medicamento")
         }
         error?.let {
@@ -249,4 +279,4 @@ fun MedicamentosSection (dao: MedicamentoDao,perfil: Perfil) {
         }
     }
 }
-private const val MAX_MEDICAMENTOS_POR_PERFIL=10
+private const val MAX_MEDICAMENTOS_POR_PACIENTE=10

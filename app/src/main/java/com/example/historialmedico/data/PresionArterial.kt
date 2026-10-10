@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "horas_medicas",
+    tableName = "presiones_arteriales",
     foreignKeys = [
         ForeignKey(
             entity = Paciente::class,
@@ -15,13 +15,13 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices=[Index("pacienteId")]
+    indices = [Index("pacienteId")]
 )
-
-data class HoraMedica(
-    @PrimaryKey(autoGenerate = true) val id: Long=0,
+data class PresionArterial(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val pacienteId: Long,
-    val especialidad: String,
-    val fechaHora: Long,
-    val lugar: String
+    val sistolica: Int,
+    val diastolica: Int,
+    val pulso: Int? = null,
+    val fechaHora: Long
 )

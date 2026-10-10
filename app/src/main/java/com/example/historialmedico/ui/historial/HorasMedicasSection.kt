@@ -18,6 +18,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,35 +31,46 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.historialmedico.alarms.AlarmScheduler
+import com.example.historialmedico.data.AlarmaDao
 import com.example.historialmedico.data.HoraMedica
 import com.example.historialmedico.data.HoraMedicaDao
-import com.example.historialmedico.data.Perfil
-import com.example.historialmedico.alarms.AlarmScheduler
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.ui.components.SelectorFechaHoraDialog
+import com.example.historialmedico.util.Fechas
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
-fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
-    val horas by dao.getByPerfil(perfil.id).collectAsState(initial =
-        emptyList())
-    var recordatorio by remember { mutableStateOf("") }
+fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paciente) {
+    val horas by remember(paciente.id) { dao.getByPaciente(paciente.id) }
+        .collectAsState(initial = emptyList())
+    val alarmas by remember(paciente.id) { alarmaDao.getDeHorasMedicas(paciente.id) }
+        .collectAsState(initial = emptyList())
+    val alarmasPorHoraMedica = alarmas.groupBy { it.horaMedicaId }
     var especialidad by remember { mutableStateOf("") }
-    var fecha by remember { mutableStateOf("") }
     var lugar by remember { mutableStateOf("") }
+    var fechaHora by remember { mutableStateOf<Long?>(null) }
+    var recordatorio by remember { mutableStateOf<Long?>(null) }
+    var mostrarSelectorFechaHora by remember { mutableStateOf(false) }
+    var mostrarSelectorRecordatorio by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var horaAEliminar by remember { mutableStateOf<HoraMedica?>(null) }
-    var scope = rememberCoroutineScope()
-    val context=LocalContext.current
+    val scope = rememberCoroutineScope()
+    val appContext = LocalContext.current.applicationContext
 
-    Column(modifier =
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+    ) {
         Text(
-            "Horas Medicas de ${perfil.nombre}", style =
-                MaterialTheme.typography.titleMedium,
+            "Horas Medicas de ${paciente.nombre}",
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -73,13 +85,24 @@ fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        buildString {
-                            append("${hora.especialidad}-${hora.fecha} (${hora.lugar})")
-                            if(hora.recordatorioMillis!=null) append(" [recordatorio activo]")
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("${hora.especialidad} - ${Fechas.fechaHoraVisible(hora.fechaHora)}")
+                        Text(
+                            hora.lugar,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        val momentoRecordatorio = alarmasPorHoraMedica[hora.id]
+                            .orEmpty()
+                            .firstNotNullOfOrNull { it.fechaHoraMillis }
+                        if (momentoRecordatorio != null) {
+                            Text(
+                                "Recordatorio: ${Fechas.fechaHoraVisible(momentoRecordatorio)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     IconButton(onClick = { horaAEliminar = hora }) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
@@ -90,102 +113,132 @@ fun HorasMedicasSection(dao: HoraMedicaDao, perfil: Perfil){
             }
         }
 
-        horaAEliminar?.let { hora->
+        horaAEliminar?.let { hora ->
             AlertDialog(
-                onDismissRequest = {horaAEliminar=null},
-                title = {Text("Eliminar hora medica")},
-                text = {Text("Seguro que quiere eliminar esta hora medica?")},
-                confirmButton={
+                onDismissRequest = { horaAEliminar = null },
+                title = { Text("Eliminar hora medica") },
+                text = { Text("Seguro que quiere eliminar esta hora medica?") },
+                confirmButton = {
                     TextButton(onClick = {
-                        if(hora.recordatorioMillis!=null){
-                            AlarmScheduler.cancelarRecordatorioHoraMedica(context,hora.id)
+                        alarmasPorHoraMedica[hora.id].orEmpty().forEach { alarma ->
+                            AlarmScheduler.cancelar(appContext, alarma.id)
                         }
                         scope.launch { dao.delete(hora) }
-                        horaAEliminar=null
-                    }){
+                        horaAEliminar = null
+                    }) {
                         Text("Eliminar")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = {horaAEliminar=null}){
+                    TextButton(onClick = { horaAEliminar = null }) {
                         Text("Cancelar")
                     }
                 }
             )
         }
+
         OutlinedTextField(
             value = especialidad,
-            onValueChange = {especialidad=it},
-            label = {Text("Especialidad")},
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = fecha,
-            onValueChange = {fecha=it},
-            label = {Text("Fecha (ej: 18/09/2026)")},
+            onValueChange = { especialidad = it },
+            label = { Text("Especialidad") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = lugar,
-            onValueChange = {lugar=it},
-            label = {Text("Lugar")},
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = recordatorio,
-            onValueChange = {recordatorio=it},
-            label = {Text("Recordatorio (opcional, ej: 18/09/2026 09:30)")},
+            onValueChange = { lugar = it },
+            label = { Text("Lugar") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-
-        Button(onClick ={
-            val recordatorioTrim=recordatorio.trim()
-            val formato= SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es","CL"))
-            formato.isLenient=false
-            val recordatorioMillis=if(recordatorioTrim.isBlank()) null else try {
-                formato.parse(recordatorioTrim)?.time
-            }catch (e: Exception){
-                null
+        OutlinedButton(
+            onClick = { mostrarSelectorFechaHora = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                fechaHora?.let { "Fecha y hora: ${Fechas.fechaHoraVisible(it)}" }
+                    ?: "Elegir fecha y hora"
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = { mostrarSelectorRecordatorio = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                recordatorio?.let { "Recordatorio: ${Fechas.fechaHoraVisible(it)}" }
+                    ?: "Agregar recordatorio (opcional)"
+            )
+        }
+        if (recordatorio != null) {
+            TextButton(onClick = { recordatorio = null }) {
+                Text("Quitar recordatorio")
             }
+        }
+        if (mostrarSelectorFechaHora) {
+            SelectorFechaHoraDialog(
+                onConfirmar = {
+                    fechaHora = it
+                    mostrarSelectorFechaHora = false
+                },
+                onCancelar = { mostrarSelectorFechaHora = false }
+            )
+        }
+        if (mostrarSelectorRecordatorio) {
+            SelectorFechaHoraDialog(
+                onConfirmar = {
+                    recordatorio = it
+                    mostrarSelectorRecordatorio = false
+                },
+                onCancelar = { mostrarSelectorRecordatorio = false }
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = {
+            val fechaHoraElegida = fechaHora
+            val recordatorioElegido = recordatorio
+            val ahora = System.currentTimeMillis()
             when {
                 especialidad.isBlank() -> error = "La especialidad es obligatoria"
-                fecha.isBlank() -> error = "La fecha es obligatoria"
                 lugar.isBlank() -> error = "El lugar es obligatorio"
-                recordatorioTrim.isNotBlank() && recordatorioMillis==null -> error ="El recordatorio debe tener formato dd/MM/yyyy HH:mm (ej: 18/09/2026 09:30)"
+                fechaHoraElegida == null -> error = "La fecha y hora son obligatorias"
+                recordatorioElegido != null && recordatorioElegido <= ahora ->
+                    error = "El recordatorio debe ser una fecha futura"
+                recordatorioElegido != null && recordatorioElegido > fechaHoraElegida ->
+                    error = "El recordatorio debe ser anterior a la hora medica"
                 else -> {
-                    val especialidadAGuardar = especialidad.trim()
-                    val fechaAGuardar = fecha.trim()
-                    val lugarAGuardar = lugar.trim()
+                    val horaMedica = HoraMedica(
+                        pacienteId = paciente.id,
+                        especialidad = especialidad.trim(),
+                        fechaHora = fechaHoraElegida,
+                        lugar = lugar.trim()
+                    )
                     especialidad = ""
-                    fecha = ""
                     lugar = ""
-                    recordatorio= ""
+                    fechaHora = null
+                    recordatorio = null
                     error = null
                     scope.launch {
-                        val id=dao.insert(
-                            HoraMedica(
-                                perfilId = perfil.id,
-                                especialidad = especialidadAGuardar,
-                                fecha = fechaAGuardar,
-                                lugar = lugarAGuardar,
-                                recordatorioMillis = recordatorioMillis
-                            )
-                        )
-                        if(recordatorioMillis!=null){
-                            AlarmScheduler.programarRecordatorioHoraMedica(context,id,especialidadAGuardar,lugarAGuardar,recordatorioMillis)
+                        withContext(NonCancellable) {
+                            val alarma = dao.insertConRecordatorio(horaMedica, recordatorioElegido)
+                            if (alarma != null) {
+                                AlarmScheduler.programar(appContext, alarma)
+                            }
                         }
                     }
                 }
             }
-        }){
+        }) {
             Text("Agregar Hora Medica")
         }
         error?.let {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(it,color=MaterialTheme.colorScheme.error, style=MaterialTheme.typography.bodySmall)
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
