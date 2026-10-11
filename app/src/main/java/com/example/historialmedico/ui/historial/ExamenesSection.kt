@@ -142,7 +142,8 @@ fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
                     IconButton(onClick = { examenAEliminar = examen }) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
-                            contentDescription = "Eliminar examen"
+                            contentDescription = "Eliminar examen",
+                            tint= MaterialTheme.colorScheme.error
                         )
                     }
                 }

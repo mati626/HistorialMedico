@@ -169,7 +169,8 @@ private fun ListaPacientesScreen(
                         }) {
                             Icon(
                                 imageVector= Icons.Filled.Delete,
-                                contentDescription = "Eliminar paciente"
+                                contentDescription = "Eliminar paciente",
+                                tint= MaterialTheme.colorScheme.error
                             )
                         }
                     }

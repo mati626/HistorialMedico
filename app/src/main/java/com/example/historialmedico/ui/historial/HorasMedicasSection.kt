@@ -106,7 +106,8 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
                     IconButton(onClick = { horaAEliminar = hora }) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
-                            contentDescription = "Eliminar hora medica"
+                            contentDescription = "Eliminar hora medica",
+                            tint= MaterialTheme.colorScheme.error
                         )
                     }
                 }

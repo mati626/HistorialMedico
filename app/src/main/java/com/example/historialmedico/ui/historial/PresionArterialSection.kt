@@ -90,7 +90,8 @@ fun PresionArterialSection(dao: PresionArterialDao,paciente: Paciente){
                     IconButton(onClick = {medicionAEliminar=medicion}) {
                         Icon(
                             imageVector=Icons.Filled.Delete,
-                            contentDescription="Eliminar medicion"
+                            contentDescription="Eliminar medicion",
+                            tint= MaterialTheme.colorScheme.error
                         )
                     }
                 }
