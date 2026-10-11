@@ -48,6 +48,7 @@ import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.data.AlarmaDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PacienteDao
+import com.example.historialmedico.data.PresionArterialDao
 import com.example.historialmedico.ui.perfil.CrearPerfilScreen
 
 @Composable
@@ -58,6 +59,7 @@ fun PacientesScreen(
     horaMedicaDao: HoraMedicaDao,
     examenDao: ExamenDao,
     alarmaDao: AlarmaDao,
+    presionArterialDao: PresionArterialDao,
     modifier: Modifier=Modifier) {
     var cargando by remember { mutableStateOf(true) }
     var perfil by remember { mutableStateOf<Perfil?>(null) }
@@ -81,6 +83,7 @@ fun PacientesScreen(
             horaMedicaDao=horaMedicaDao,
             examenDao=examenDao,
             alarmaDao=alarmaDao,
+            presionArterialDao = presionArterialDao,
             modifier=modifier,
             onBack={pacienteSeleccionado=null}
         )
@@ -166,7 +169,8 @@ private fun ListaPacientesScreen(
                         }) {
                             Icon(
                                 imageVector= Icons.Filled.Delete,
-                                contentDescription = "Eliminar paciente"
+                                contentDescription = "Eliminar paciente",
+                                tint= MaterialTheme.colorScheme.error
                             )
                         }
                     }

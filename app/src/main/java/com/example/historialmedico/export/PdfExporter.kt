@@ -10,6 +10,7 @@ import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.HoraMedica
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.data.PresionArterial
 import com.example.historialmedico.util.Fechas
 import java.io.File
 import java.io.FileOutputStream
@@ -20,7 +21,8 @@ object PdfExporter{
         paciente: Paciente,
         medicamentos: List<Medicamento>,
         horasMedicas: List<HoraMedica>,
-        examenes: List<Examen>
+        examenes: List<Examen>,
+        presiones: List<PresionArterial>
     ): Uri{
         val documento= PdfDocument()
         val paintTitulo= Paint().apply { textSize=20f; isFakeBoldText=true }
@@ -135,6 +137,23 @@ object PdfExporter{
                 dibujarImagenSiExiste(examen.documentoUri)
         }
     }
+        y+=12f
+
+        saltoDePaginaSiNecesario()
+        canvas.drawText("Presion arterial",margenIzquierdo,y,paintSubtitulo)
+        y+=20f
+        if(presiones.isEmpty()){
+            canvas.drawText("Sin mediciones registradas",margenIzquierdo,y,paintTexto)
+            y+=18f
+        }else{
+            presiones.forEach {presion->
+                saltoDePaginaSiNecesario()
+                val pulso=presion.pulso?.let {" - Pulso: $it lpm"}?:""
+                canvas.drawText("- ${Fechas.fechaHoraVisible(presion.fechaHora)}:" +
+                        " ${presion.sistolica}/${presion.diastolica} mmHg$pulso",margenIzquierdo,y,paintTexto)
+                y+=18f
+            }
+        }
         documento.finishPage(pagina)
 
         val carpeta=File(context.cacheDir,"pdfs")

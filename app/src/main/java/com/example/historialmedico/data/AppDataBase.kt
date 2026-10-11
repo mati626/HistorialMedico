@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
 
 @Database(entities = [
     Perfil::class,
@@ -23,6 +26,8 @@ abstract class AppDataBase: RoomDatabase() {
     abstract fun horaMedicaDao(): HoraMedicaDao
     abstract fun examenDao(): ExamenDao
     abstract fun alarmaDao(): AlarmaDao
+
+    abstract fun presionArterialDao(): PresionArterialDao
 
     companion object {
         @Volatile private var INSTANCE: AppDataBase?=null

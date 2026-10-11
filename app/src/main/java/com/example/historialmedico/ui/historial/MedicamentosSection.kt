@@ -154,7 +154,8 @@ fun MedicamentosSection (dao: MedicamentoDao,alarmaDao: AlarmaDao,paciente: Paci
                     IconButton(onClick = { medicamentoAEliminar = medicamento }) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
-                            contentDescription = "Eliminar medicamento"
+                            contentDescription = "Eliminar medicamento",
+                            tint= MaterialTheme.colorScheme.error
                         )
                     }
                 }
