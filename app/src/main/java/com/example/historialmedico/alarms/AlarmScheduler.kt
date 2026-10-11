@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import com.example.historialmedico.data.Alarma
+import com.example.historialmedico.data.AppDataBase
 import java.util.Calendar
 
 object AlarmScheduler {
@@ -25,6 +26,10 @@ object AlarmScheduler {
         alarmManager.cancel(pendingIntent(context, alarmaId))
     }
 
+    suspend fun reprogramarTodas(context: Context){
+        val alarmas= AppDataBase.getInstance(context).alarmaDao().getActivas()
+        alarmas.forEach { alarma -> programar(context, alarma) }
+    }
     private fun proximoDisparo(alarma: Alarma): Long? {
         val ahora = System.currentTimeMillis()
         val hora = alarma.hora
