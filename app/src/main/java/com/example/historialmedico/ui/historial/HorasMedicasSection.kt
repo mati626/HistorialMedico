@@ -1,6 +1,7 @@
 package com.example.historialmedico.ui.historial
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,9 +58,9 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
     var especialidad by remember { mutableStateOf("") }
     var lugar by remember { mutableStateOf("") }
     var fechaHora by remember { mutableStateOf<Long?>(null) }
-    var recordatorio by remember { mutableStateOf<Long?>(null) }
+    var anticipacion by remember { mutableStateOf<Anticipacion?>(null) }
     var mostrarSelectorFechaHora by remember { mutableStateOf(false) }
-    var mostrarSelectorRecordatorio by remember { mutableStateOf(false) }
+    var menuRecordatorioAbierto by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var horaAEliminar by remember { mutableStateOf<HoraMedica?>(null) }
     val scope = rememberCoroutineScope()
@@ -92,12 +95,12 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        val momentoRecordatorio = alarmasPorHoraMedica[hora.id]
-                            .orEmpty()
-                            .firstNotNullOfOrNull { it.fechaHoraMillis }
-                        if (momentoRecordatorio != null) {
+                        val alarma = alarmasPorHoraMedica[hora.id].orEmpty().firstOrNull()
+                            val momentoRecordatorio=alarma?.fechaHoraMillis
+                        if (alarma != null && momentoRecordatorio!=null) {
                             Text(
-                                "Recordatorio: ${Fechas.fechaHoraVisible(momentoRecordatorio)}",
+                                if(alarma.activo) "Recordatorio: ${Fechas.fechaHoraVisible(momentoRecordatorio)}"
+                                else "Recordatorio enviado",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -162,18 +165,33 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(
-            onClick = { mostrarSelectorRecordatorio = true },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                recordatorio?.let { "Recordatorio: ${Fechas.fechaHoraVisible(it)}" }
-                    ?: "Agregar recordatorio (opcional)"
-            )
-        }
-        if (recordatorio != null) {
-            TextButton(onClick = { recordatorio = null }) {
-                Text("Quitar recordatorio")
+        Box{
+            OutlinedButton(
+                onClick = {menuRecordatorioAbierto=true},
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Recordatorio: ${anticipacion?.etiqueta?: "sin recordatorio"}")
+            }
+            DropdownMenu(
+                expanded = menuRecordatorioAbierto,
+                onDismissRequest = {menuRecordatorioAbierto=false}
+            ) {
+                DropdownMenuItem(
+                    text = {Text("Sin recordatorio")},
+                    onClick={
+                        anticipacion=null
+                        menuRecordatorioAbierto = false
+                    }
+                )
+                Anticipacion.entries.forEach{ opcion ->
+                    DropdownMenuItem(
+                        text={Text(opcion.etiqueta)},
+                        onClick={
+                            anticipacion=opcion
+                            menuRecordatorioAbierto=false
+                        }
+                    )
+                }
             }
         }
         if (mostrarSelectorFechaHora) {
@@ -185,29 +203,22 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
                 onCancelar = { mostrarSelectorFechaHora = false }
             )
         }
-        if (mostrarSelectorRecordatorio) {
-            SelectorFechaHoraDialog(
-                onConfirmar = {
-                    recordatorio = it
-                    mostrarSelectorRecordatorio = false
-                },
-                onCancelar = { mostrarSelectorRecordatorio = false }
-            )
-        }
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(onClick = {
             val fechaHoraElegida = fechaHora
-            val recordatorioElegido = recordatorio
+            val anticipacionElegida = anticipacion
             val ahora = System.currentTimeMillis()
+            val recordatorioElegido=
+                if (fechaHoraElegida!=null && anticipacionElegida != null)
+                    fechaHoraElegida-anticipacionElegida.minutos * 60_000L
+            else null
             when {
                 especialidad.isBlank() -> error = "La especialidad es obligatoria"
                 lugar.isBlank() -> error = "El lugar es obligatorio"
                 fechaHoraElegida == null -> error = "La fecha y hora son obligatorias"
                 recordatorioElegido != null && recordatorioElegido <= ahora ->
-                    error = "El recordatorio debe ser una fecha futura"
-                recordatorioElegido != null && recordatorioElegido > fechaHoraElegida ->
-                    error = "El recordatorio debe ser anterior a la hora medica"
+                    error = "Ese recordatorio ya paso: elige una anticipacion menor o quitalo"
                 else -> {
                     val horaMedica = HoraMedica(
                         pacienteId = paciente.id,
@@ -218,7 +229,7 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
                     especialidad = ""
                     lugar = ""
                     fechaHora = null
-                    recordatorio = null
+                    anticipacion = null
                     error = null
                     scope.launch {
                         withContext(NonCancellable) {
@@ -242,4 +253,10 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
             )
         }
     }
+}
+private enum class Anticipacion(val minutos: Int, val etiqueta: String){
+    TREINTA_MINUTOS(30, "30 minutos antes"),
+    UNA_HORA(60, "1 hora antes"),
+    DOS_HORAS(120, "2 horas antes"),
+    UN_DIA(1440, "1 dia antes")
 }
