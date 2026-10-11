@@ -81,12 +81,14 @@ fun PacienteDetalleScreen(
                         val medicamentos = medicamentoDao.getByPaciente(paciente.id).first()
                         val horasMedicas = horaMedicaDao.getByPaciente(paciente.id).first()
                         val examenes = examenDao.getByPaciente(paciente.id).first()
+                        val presiones=presionArterialDao.getByPaciente(paciente.id).first()
                         PdfExporter.generarPdf(
                             context,
                             paciente,
                             medicamentos,
                             horasMedicas,
-                            examenes
+                            examenes,
+                            presiones
                         )
                     }
                     val intent = Intent(Intent.ACTION_SEND).apply {
