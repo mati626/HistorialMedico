@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,6 +30,7 @@ import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.data.PresionArterialDao
 import com.example.historialmedico.export.PdfExporter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ fun PacienteDetalleScreen(
     horaMedicaDao: HoraMedicaDao,
     examenDao: ExamenDao,
     alarmaDao: AlarmaDao,
+    presionArterialDao: PresionArterialDao,
     modifier: Modifier= Modifier,
     onBack:()-> Unit
 ){
@@ -101,7 +103,7 @@ fun PacienteDetalleScreen(
         }
         Spacer(modifier= Modifier.height(16.dp))
 
-        TabRow(selectedTabIndex = tabSeleccionado) {
+        ScrollableTabRow(selectedTabIndex = tabSeleccionado, edgePadding = 0.dp) {
             Tab(
                 selected = tabSeleccionado==0,
                 onClick = {tabSeleccionado=0},
@@ -117,6 +119,11 @@ fun PacienteDetalleScreen(
                 onClick = {tabSeleccionado=2},
                 text = {Text("Examenes")}
             )
+            Tab(
+                selected = tabSeleccionado==3,
+                onClick = {tabSeleccionado=3},
+                text={Text("Presion")}
+            )
         }
         Spacer(modifier= Modifier.height(16.dp))
         Column(modifier=Modifier.weight(1f)) {
@@ -124,6 +131,7 @@ fun PacienteDetalleScreen(
                 0 -> MedicamentosSection(dao = medicamentoDao, alarmaDao=alarmaDao,paciente = paciente)
                 1 -> HorasMedicasSection(dao = horaMedicaDao,alarmaDao=alarmaDao, paciente = paciente)
                 2 -> ExamenesSection(dao = examenDao, paciente = paciente)
+                3 -> PresionArterialSection(dao = presionArterialDao, paciente = paciente)
             }
         }
     }
