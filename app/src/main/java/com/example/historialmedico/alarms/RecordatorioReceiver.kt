@@ -33,10 +33,11 @@ class RecordatorioReceiver : BroadcastReceiver() {
                 if (alarma == null || !alarma.activo) return@launch
 
                 val texto = textoNotificacion(database, alarma) ?: return@launch
-                mostrarNotificacion(context, alarmaId, texto.first, texto.second)
-
+                val mostrada=mostrarNotificacion(context, alarmaId, texto.first, texto.second)
                 if (alarma.hora != null) {
                     AlarmScheduler.programar(context, alarma)
+                }else if (mostrada){
+                    database.alarmaDao().desactivar(alarma.id)
                 }
             } finally {
                 pendingResult.finish()
@@ -57,10 +58,10 @@ class RecordatorioReceiver : BroadcastReceiver() {
         return "Hora medica de ${paciente.nombre}" to "${horaMedica.especialidad} en ${horaMedica.lugar}"
     }
 
-    private fun mostrarNotificacion(context: Context, alarmaId: Long, titulo: String, mensaje: String) {
+    private fun mostrarNotificacion(context: Context, alarmaId: Long, titulo: String, mensaje: String): Boolean {
         val permisoConcedido = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        if (!permisoConcedido) return
+        if (!permisoConcedido) return false
 
         crearCanalNotificacion(context)
 
@@ -80,6 +81,7 @@ class RecordatorioReceiver : BroadcastReceiver() {
             .build()
 
         NotificationManagerCompat.from(context).notify(alarmaId.toInt(), notificacion)
+        return true
     }
 
     private fun crearCanalNotificacion(context: Context) {
