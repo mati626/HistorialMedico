@@ -66,7 +66,7 @@ fun CreatePinScreen(
         OutlinedTextField(
             value = pin,
             onValueChange = {if(it.length<=6&&it.all(Char::isDigit))pin=it},
-            label = {Text("PIN (4 a 6 digitos")},
+            label = {Text("PIN (4 a 6 digitos)")},
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             modifier= Modifier.fillMaxWidth()
