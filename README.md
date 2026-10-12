@@ -47,6 +47,7 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/exportacion** - módulo de exportacion/compartición de datos
 - **feature/room-v7** - rediseño de la base de datos (pacientes, alarmas y nuevas tablas)
 - **feature/presion-arterial** - registro de presión arterial
+- **feature/recordatorios-horas-medicas** - anticipacion del recordatorio y reprogramacion de alarmas
 
 ## Como Correr el Proyecto
 
@@ -62,7 +63,7 @@ Este proyecto sigue el modelo GitFlow:
 - **Perfil y pacientes:** en el primer inicio se crea el perfil del titular, con la opción de registrarse también como paciente. Desde la lista se agregan y eliminan pacientes.
 - **Historial médico:** registro y eliminación de medicamentos, horas médicas y exámenes por paciente. Medicamentos y exámenes permiten escanear y adjuntar documentos con ML Kit Document Scanner. Las fechas y horas se eligen con calendario y reloj.
 - **Presión arterial:** registro de mediciones por paciente (sistólica, diastólica, pulso opcional, fecha y hora), con validación de rangos. La aplicación registra y muestra valores, no los interpreta.
-- **Alarmas y recordatorios:** varios recordatorios diarios por medicamento y un recordatorio puntual por hora médica, ambos con notificación. Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar batería. Las alarmas se reprograman automáticamente si el dispositivo se reinicia.
+- **Alarmas y recordatorios:** varios recordatorios diarios por medicamento y un recordatorio por hora médica, eligiendo con cuánta anticipación avisar (30 minutos, 1 hora, 2 horas o 1 día). Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar batería. Las alarmas se reprograman al reiniciar el dispositivo, al actualizar la aplicación y al volver a abrirla.
 - **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
 - **CI/CD:** GitHub Actions compila el proyecto automáticamente en cada push.
 
@@ -73,7 +74,7 @@ Este proyecto sigue el modelo GitFlow:
 - **Ingreso de medicamentos por reconocimiento de texto** de la receta y la caja.
 - **Acceso simplificado para emergencias.**
 - **Seguridad:** cifrado de la base de datos y límite de intentos de PIN.
-- **Alarmas:** al actualizar o reinstalar la aplicación, los recordatorios no se reprograman hasta reiniciar el dispositivo.
+
 
 
 ## Licencia
