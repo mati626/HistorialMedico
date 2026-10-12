@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -50,6 +51,19 @@ class ExportarPdfE2ETest {
                 composeRule.onAllNodesWithText("Crea tu perfil").fetchSemanticsNodes().isNotEmpty()
             }
             composeRule.onNodeWithText("Crea tu perfil").assertIsDisplayed()
+            composeRule.onNodeWithText("Tu nombre").performTextInput("Paciente Prueba")
+            composeRule.onNodeWithText("Continuar").performClick()
+            composeRule.waitUntil(timeoutMillis = 5_000) {
+                composeRule.onAllNodesWithText("Yo").fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithText("Paciente Prueba").performClick()
+            composeRule.onNodeWithText("Nombre").performTextInput("Medicamento Prueba")
+            composeRule.onNodeWithText("Dosis").performTextInput("10 mg")
+            composeRule.onNodeWithText("Agregar Medicamento").performScrollTo().performClick()
+            composeRule.waitUntil(timeoutMillis = 5_000){
+                composeRule.onAllNodesWithText("Medicamento Prueba - 10 mg").fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithText("Medicamento Prueba - 10 mg").performScrollTo().assertIsDisplayed()
         }
     }
 }
