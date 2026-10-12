@@ -4,7 +4,10 @@ import android.Manifest
 import android.os.Build
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -37,6 +40,16 @@ class ExportarPdfE2ETest {
     fun pruebaCrearPinEntrarExportar(){
         ActivityScenario.launch(MainActivity::class.java).use {
             composeRule.onNodeWithText("Cree su PIN de Acceso").assertIsDisplayed()
+            composeRule.onNodeWithText("PIN (4 a 6 digitos)").performTextInput("1234")
+            composeRule.onNodeWithText("Confirme su PIN").performTextInput("1234")
+            composeRule.onNodeWithText("Guardar PIN").performClick()
+            composeRule.onNodeWithText("Usar PIN en su lugar").performClick()
+            composeRule.onNodeWithText("PIN").performTextInput("1234")
+            composeRule.onNodeWithText("Desbloquear").performClick()
+            composeRule.waitUntil(timeoutMillis = 5_000) {
+                composeRule.onAllNodesWithText("Crea tu perfil").fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithText("Crea tu perfil").assertIsDisplayed()
         }
     }
 }
