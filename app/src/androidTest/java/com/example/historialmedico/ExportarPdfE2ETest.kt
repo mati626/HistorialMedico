@@ -85,7 +85,7 @@ class ExportarPdfE2ETest {
             composeRule.onNodeWithText("Crea tu perfil").assertIsDisplayed()
             composeRule.onNodeWithText("Tu nombre").performTextInput("Paciente Prueba")
             composeRule.onNodeWithText("Continuar").performSemanticsAction(SemanticsActions.OnClick)
-            //"Yo" es la relacion del titular: solo aparece en la lista de pendientes
+            //"Yo" es la relacion del titular: solo aparece en la lista de pacientes
             composeRule.waitUntil(timeoutMillis = 5_000) {
                 composeRule.onAllNodesWithText("Yo").fetchSemanticsNodes().isNotEmpty()
             }
