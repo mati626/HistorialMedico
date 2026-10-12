@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.AlarmaDao
+import com.example.historialmedico.data.ControlTomaDao
 import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.MedicamentoDao
@@ -44,9 +45,10 @@ fun PacienteDetalleScreen(
     horaMedicaDao: HoraMedicaDao,
     examenDao: ExamenDao,
     alarmaDao: AlarmaDao,
+    controlTomaDao: ControlTomaDao,
     presionArterialDao: PresionArterialDao,
-    modifier: Modifier= Modifier,
-    onBack:()-> Unit
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit,
 ){
     var tabSeleccionado by remember { mutableStateOf(0) }
     val scope=rememberCoroutineScope()
@@ -130,7 +132,7 @@ fun PacienteDetalleScreen(
         Spacer(modifier= Modifier.height(16.dp))
         Column(modifier=Modifier.weight(1f)) {
             when (tabSeleccionado) {
-                0 -> MedicamentosSection(dao = medicamentoDao, alarmaDao=alarmaDao,paciente = paciente)
+                0 -> MedicamentosSection(dao = medicamentoDao, alarmaDao=alarmaDao, controlTomaDao=controlTomaDao, paciente = paciente)
                 1 -> HorasMedicasSection(dao = horaMedicaDao,alarmaDao=alarmaDao, paciente = paciente)
                 2 -> ExamenesSection(dao = examenDao, paciente = paciente)
                 3 -> PresionArterialSection(dao = presionArterialDao, paciente = paciente)

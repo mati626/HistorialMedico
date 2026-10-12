@@ -52,6 +52,7 @@ import com.example.historialmedico.util.Fechas
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import com.example.historialmedico.alarms.AlarmScheduler
+import com.example.historialmedico.data.ControlTomaDao
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -60,7 +61,7 @@ import java.io.File
 
 
 @Composable
-fun MedicamentosSection (dao: MedicamentoDao,alarmaDao: AlarmaDao,paciente: Paciente) {
+fun MedicamentosSection (dao: MedicamentoDao,alarmaDao: AlarmaDao,controlTomaDao: ControlTomaDao,paciente: Paciente) {
     val medicamentos by remember(paciente.id) { dao.getByPaciente(paciente.id) }.collectAsState(initial = emptyList())
     val alarmas by remember(paciente.id) {alarmaDao.getDeMedicamentos(paciente.id)} .collectAsState(initial = emptyList())
     val alarmasPorMedicamento =alarmas.groupBy { it.medicamentoId }

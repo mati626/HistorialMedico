@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.data.AlarmaDao
+import com.example.historialmedico.data.ControlTomaDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PacienteDao
 import com.example.historialmedico.data.PresionArterialDao
@@ -59,8 +60,10 @@ fun PacientesScreen(
     horaMedicaDao: HoraMedicaDao,
     examenDao: ExamenDao,
     alarmaDao: AlarmaDao,
+    controlTomaDao: ControlTomaDao,
     presionArterialDao: PresionArterialDao,
-    modifier: Modifier=Modifier) {
+    modifier: Modifier = Modifier,
+) {
     var cargando by remember { mutableStateOf(true) }
     var perfil by remember { mutableStateOf<Perfil?>(null) }
     var pacienteSeleccionado by remember { mutableStateOf<Paciente?>(null) }
@@ -81,6 +84,7 @@ fun PacientesScreen(
             paciente=paciente,
             medicamentoDao=medicamentoDao,
             horaMedicaDao=horaMedicaDao,
+            controlTomaDao=controlTomaDao,
             examenDao=examenDao,
             alarmaDao=alarmaDao,
             presionArterialDao = presionArterialDao,

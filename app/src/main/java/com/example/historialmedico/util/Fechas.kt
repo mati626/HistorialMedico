@@ -42,4 +42,8 @@ object Fechas{
     //480->"08:00"
     fun minutosAHora(minutos: Int): String=
         String.format(Locale.US,"%02d:%02d",minutos/60,minutos%60)
+
+    //fecha de hoy
+    fun hoyIso(): String=
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 }

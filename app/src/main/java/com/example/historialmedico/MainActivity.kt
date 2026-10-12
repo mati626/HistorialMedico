@@ -77,6 +77,7 @@ class MainActivity : FragmentActivity() {
                             examenDao = database.examenDao(),
                             alarmaDao = database.alarmaDao(),
                             presionArterialDao = database.presionArterialDao(),
+                            controlTomaDao=database.controlTomaDao(),
                             modifier = Modifier.padding(innerPadding)
                         )
                         AuthScreen.LOCKED -> LockScreen(
