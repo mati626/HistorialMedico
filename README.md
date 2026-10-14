@@ -10,6 +10,7 @@ Aplicación móvil diseñada para el registro, organización y seguimiento de la
 - **ML Kit Document Scanner** - escaneo y adjunto de documentos (recetas medicas y examenes)
 - **AlarmManager** + **BroadcastReceiver** - recordatorios diarios de medicamentos y notificaciones previas a horas medicas
 - **PdfDocument** (API nativa de Android, sin librerias externas) - generacion y exportacion del historial medico en PDF
+- **JUnit**, **Compose UI Test** y **Espresso** - pruebas instrumentadas
 
 ## Arquitectura y Privacidad
 
@@ -20,7 +21,7 @@ Seguridad actual: el PIN se guarda como hash SHA-256 dentro de EncryptedSharedPr
 El codigo esta organizado por paquetes segun responsabilidad:
 - `ui/auth` - pantallas de bloqueo, creacion y validacion de PIN
 - `ui/perfil` - pantalla inicial para crear el perfil del titular
-- `ui/historial` - lista de pacientes, detalle por paciente, y las secciones de Medicamentos, Horas Medicas y Examenes
+- `ui/historial` - lista de pacientes, detalle por paciente, y las secciones de Medicamentos (con el control de tomas), Horas Medicas, Examenes y presion arterial
 - `ui/components` - selectores reutilizables de fecha y hora
 - `data` - entidades y DAOs de Room
 - `security` - biometria y manejo del PIN cifrado
@@ -48,6 +49,8 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/room-v7** - rediseño de la base de datos (pacientes, alarmas y nuevas tablas)
 - **feature/presion-arterial** - registro de presión arterial
 - **feature/recordatorios-horas-medicas** - anticipacion del recordatorio y reprogramacion de alarmas
+- **feature/control-tomas:** - control diario de tomas de medicamentos
+- **feature/pruebas-e2e:** - pruebas de extremo a extremo del flujo de exportacion a PDF
 
 ## Como Correr el Proyecto
 
@@ -63,13 +66,14 @@ Este proyecto sigue el modelo GitFlow:
 - **Perfil y pacientes:** en el primer inicio se crea el perfil del titular, con la opción de registrarse también como paciente. Desde la lista se agregan y eliminan pacientes.
 - **Historial médico:** registro y eliminación de medicamentos, horas médicas y exámenes por paciente. Medicamentos y exámenes permiten escanear y adjuntar documentos con ML Kit Document Scanner. Las fechas y horas se eligen con calendario y reloj.
 - **Presión arterial:** registro de mediciones por paciente (sistólica, diastólica, pulso opcional, fecha y hora), con validación de rangos. La aplicación registra y muestra valores, no los interpreta.
+- **Control de tomas:** los medicamentos con recordatorios muestran una casilla por cada hora para marcar la toma del día, junto al resumen "Tomas de hoy: X de N". Las marcas se guardan por día: al cambiar el día, las casillas parten vacias.
 - **Alarmas y recordatorios:** varios recordatorios diarios por medicamento y un recordatorio por hora médica, eligiendo con cuánta anticipación avisar (30 minutos, 1 hora, 2 horas o 1 día). Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar batería. Las alarmas se reprograman al reiniciar el dispositivo, al actualizar la aplicación y al volver a abrirla.
 - **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
 - **CI/CD:** GitHub Actions compila el proyecto automáticamente en cada push.
+- **Pruebas:** una prueba de extremo a extremo (`ExportarPdfE2ETest`) recorre el flujo completo: crear el PIN, ingresar, crear el perfil, agregar un medicamento y exportar el PDF. Se ejecuta desde Android Studio en un emulador; el CI no la ejecuta.
 
 ## En Desarrollo y Pendiente
 
-- **control diario de tomas:** las tablas ya existen en la base de datos, pero todavía no tienen pantalla.
 - **Solicitudes de exámenes:** el estado del examen (solicitado, agendado, realizado) hoy se deduce de los datos ingresados; falta el selector de estado y el vínculo con una hora médica.
 - **Ingreso de medicamentos por reconocimiento de texto** de la receta y la caja.
 - **Acceso simplificado para emergencias.**
