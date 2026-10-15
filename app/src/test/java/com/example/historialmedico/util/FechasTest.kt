@@ -24,4 +24,19 @@ class FechasTest {
     fun minutosAHora_rellenoCero(){
         assertEquals("01:01", Fechas.minutosAHora(61))
     }
+
+    @Test
+    fun isoAvisible_fechaNormal(){
+        assertEquals("18/10/2026", Fechas.isoAVisible("2026-10-18"))
+    }
+
+    @Test
+    fun isoAvisible_dosPartesIguales(){
+        assertEquals("2026-10", Fechas.isoAVisible("2026-10"))
+    }
+
+    @Test
+    fun isoAvisible_conBarrasQuedaIgual(){
+        assertEquals("18/10/2026", Fechas.isoAVisible("18/10/2026"))
+    }
 }
