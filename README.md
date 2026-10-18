@@ -53,7 +53,7 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/pruebas-e2e** - pruebas de extremo a extremo del flujo de exportacion a PDF
 - **feature/pruebas-unitarias** - pruebas unitarias de fechas, alarmas y regla del PIN
 - **feature/pruebas-integracion** - pruebas de integración de la base de datos y del PIN
-- **feature/prueba-e2e-presion** - pruebas de extremo a extremo del registro de presión aretrial
+- **feature/prueba-e2e-presion** - pruebas de extremo a extremo del registro de presión arterial
 
 ## Como Correr el Proyecto
 
@@ -74,10 +74,10 @@ Este proyecto sigue el modelo GitFlow:
 - **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
 - **CI/CD:** GitHub Actions compila el proyecto y ejecuta las pruebas unitarias en cada push.
 - **Pruebas:**
- - 16 casos de pruebas unitarios (conversión de fechas, reglas de las alarmas y reglas del PIN), que el CI ejecuta en cada push
- - 9 casos de integracion sobre la base de datos (creacion del perfil, medicamentos con alarmas y borrado en cascada de un paciente) y sobre el PIN cifrado.
- - 2 pruebas de extremo a extremo que entran con PIN: exportar el PDF de un paciente y registrar una presion arterial.
- - Las de integración y extremo a extremo se ejecutan desde Android Studio en un emulador; el CI no las ejecuta.
+  - 16 casos unitarios (conversión de fechas, reglas de las alarmas y reglas del PIN), que el CI ejecuta en cada push
+  - 9 casos de integracion sobre la base de datos (creacion del perfil, medicamentos con alarmas y borrado en cascada de un paciente) y sobre el PIN cifrado.
+  - 2 pruebas de extremo a extremo que entran con PIN: exportar el PDF de un paciente y registrar una presion arterial.
+  - Las de integración y extremo a extremo se ejecutan desde Android Studio en un emulador; el CI no las ejecuta.
 
 ## En Desarrollo y Pendiente
 
