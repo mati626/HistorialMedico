@@ -10,7 +10,7 @@ Aplicación móvil diseñada para el registro, organización y seguimiento de la
 - **ML Kit Document Scanner** - escaneo y adjunto de documentos (recetas medicas y examenes)
 - **AlarmManager** + **BroadcastReceiver** - recordatorios diarios de medicamentos y notificaciones previas a horas medicas
 - **PdfDocument** (API nativa de Android, sin librerias externas) - generacion y exportacion del historial medico en PDF
-- **JUnit**, **Compose UI Test** y **Espresso** - pruebas instrumentadas
+- **JUnit**, **Compose UI Test** y **Espresso** - pruebas unitarias e instrumentadas
 
 ## Arquitectura y Privacidad
 
@@ -24,7 +24,7 @@ El codigo esta organizado por paquetes segun responsabilidad:
 - `ui/historial` - lista de pacientes, detalle por paciente, y las secciones de Medicamentos (con el control de tomas), Horas Medicas, Examenes y presion arterial
 - `ui/components` - selectores reutilizables de fecha y hora
 - `data` - entidades y DAOs de Room
-- `security` - biometria y manejo del PIN cifrado
+- `security` - biometría, manejo del PIN cifrado y regla para crear el PIN
 - `alarms` - programacion de recordatorios y receivers de notificaciones
 - `export` - generacion del PDF del historial
 - `util` - utilidades de formato y conversión de fechas
@@ -49,8 +49,9 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/room-v7** - rediseño de la base de datos (pacientes, alarmas y nuevas tablas)
 - **feature/presion-arterial** - registro de presión arterial
 - **feature/recordatorios-horas-medicas** - anticipacion del recordatorio y reprogramacion de alarmas
-- **feature/control-tomas:** - control diario de tomas de medicamentos
-- **feature/pruebas-e2e:** - pruebas de extremo a extremo del flujo de exportacion a PDF
+- **feature/control-tomas** - control diario de tomas de medicamentos
+- **feature/pruebas-e2e** - pruebas de extremo a extremo del flujo de exportacion a PDF
+- **feature/pruebas-unitarias** - pruebas unitarias de fechas, alarmas y regla del PIN
 
 ## Como Correr el Proyecto
 
@@ -69,8 +70,8 @@ Este proyecto sigue el modelo GitFlow:
 - **Control de tomas:** los medicamentos con recordatorios muestran una casilla por cada hora para marcar la toma del día, junto al resumen "Tomas de hoy: X de N". Las marcas se guardan por día: al cambiar el día, las casillas parten vacias.
 - **Alarmas y recordatorios:** varios recordatorios diarios por medicamento y un recordatorio por hora médica, eligiendo con cuánta anticipación avisar (30 minutos, 1 hora, 2 horas o 1 día). Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar batería. Las alarmas se reprograman al reiniciar el dispositivo, al actualizar la aplicación y al volver a abrirla.
 - **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
-- **CI/CD:** GitHub Actions compila el proyecto automáticamente en cada push.
-- **Pruebas:** una prueba de extremo a extremo (`ExportarPdfE2ETest`) recorre el flujo completo: crear el PIN, ingresar, crear el perfil, agregar un medicamento y exportar el PDF. Se ejecuta desde Android Studio en un emulador; el CI no la ejecuta.
+- **CI/CD:** GitHub Actions compila el proyecto y ejecuta las pruebas unitarias en cada push.
+- **Pruebas:** 16 casos de pruebas unitarios (conversión de fechas, reglas de las alarmas y reglas del PIN), que el CI ejecuta en cada push, y una prueba de extremo a extremo (`ExportarPdfE2ETest`) que recorre el flujo completo: crea el PIN, ingresar, crear el perfil, agregar un medicamento y exportar el PDF. Esta ultima se ejecuta desde Android Studio en un emulador; el CI no la ejecuta.
 
 ## En Desarrollo y Pendiente
 
