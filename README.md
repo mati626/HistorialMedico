@@ -52,6 +52,8 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/control-tomas** - control diario de tomas de medicamentos
 - **feature/pruebas-e2e** - pruebas de extremo a extremo del flujo de exportacion a PDF
 - **feature/pruebas-unitarias** - pruebas unitarias de fechas, alarmas y regla del PIN
+- **feature/pruebas-integracion** - pruebas de integración de la base de datos y del PIN
+- **feature/prueba-e2e-presion** - pruebas de extremo a extremo del registro de presión aretrial
 
 ## Como Correr el Proyecto
 
@@ -71,7 +73,11 @@ Este proyecto sigue el modelo GitFlow:
 - **Alarmas y recordatorios:** varios recordatorios diarios por medicamento y un recordatorio por hora médica, eligiendo con cuánta anticipación avisar (30 minutos, 1 hora, 2 horas o 1 día). Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar batería. Las alarmas se reprograman al reiniciar el dispositivo, al actualizar la aplicación y al volver a abrirla.
 - **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
 - **CI/CD:** GitHub Actions compila el proyecto y ejecuta las pruebas unitarias en cada push.
-- **Pruebas:** 16 casos de pruebas unitarios (conversión de fechas, reglas de las alarmas y reglas del PIN), que el CI ejecuta en cada push, y una prueba de extremo a extremo (`ExportarPdfE2ETest`) que recorre el flujo completo: crea el PIN, ingresar, crear el perfil, agregar un medicamento y exportar el PDF. Esta ultima se ejecuta desde Android Studio en un emulador; el CI no la ejecuta.
+- **Pruebas:**
+ - 16 casos de pruebas unitarios (conversión de fechas, reglas de las alarmas y reglas del PIN), que el CI ejecuta en cada push
+ - 9 casos de integracion sobre la base de datos (creacion del perfil, medicamentos con alarmas y borrado en cascada de un paciente) y sobre el PIN cifrado.
+ - 2 pruebas de extremo a extremo que entran con PIN: exportar el PDF de un paciente y registrar una presion arterial.
+ - Las de integración y extremo a extremo se ejecutan desde Android Studio en un emulador; el CI no las ejecuta.
 
 ## En Desarrollo y Pendiente
 
