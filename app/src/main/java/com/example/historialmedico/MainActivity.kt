@@ -18,6 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.security.BiometricAuthManager
 import com.example.historialmedico.security.PinManager
 import com.example.historialmedico.ui.theme.HistorialMedicoTheme
@@ -25,7 +27,10 @@ import com.example.historialmedico.data.AppDataBase
 import com.example.historialmedico.ui.auth.LockScreen
 import com.example.historialmedico.ui.auth.CreatePinScreen
 import com.example.historialmedico.ui.auth.PinEntryScreen
-import com.example.historialmedico.ui.historial.PerfilesScreen
+import com.example.historialmedico.ui.historial.PacientesScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
 enum class AuthScreen {CREATE_PIN, LOCKED, ENTER_PIN, AUTHENTICATED}
 class MainActivity : FragmentActivity() {
 
@@ -43,6 +48,9 @@ class MainActivity : FragmentActivity() {
         biometricAuthManager = BiometricAuthManager(this)
         pinManager = PinManager(this)
         database = AppDataBase.getInstance(this)
+        lifecycleScope.launch(Dispatchers.IO) {
+            AlarmScheduler.reprogramarTodas(applicationContext)
+        }
 
         if(Build.VERSION.SDK_INT>= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this,
@@ -61,11 +69,15 @@ class MainActivity : FragmentActivity() {
                 }
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     when (screen) {
-                        AuthScreen.AUTHENTICATED -> PerfilesScreen(
-                            dao = database.perfilDao(),
+                        AuthScreen.AUTHENTICATED -> PacientesScreen(
+                            perfilDao = database.perfilDao(),
+                            pacienteDao = database.pacienteDao(),
                             medicamentoDao = database.medicamentoDao(),
                             horaMedicaDao = database.horaMedicaDao(),
                             examenDao = database.examenDao(),
+                            alarmaDao = database.alarmaDao(),
+                            presionArterialDao = database.presionArterialDao(),
+                            controlTomaDao=database.controlTomaDao(),
                             modifier = Modifier.padding(innerPadding)
                         )
                         AuthScreen.LOCKED -> LockScreen(

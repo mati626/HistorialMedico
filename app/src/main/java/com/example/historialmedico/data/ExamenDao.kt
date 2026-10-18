@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExamenDao {
-    @Query("SELECT * FROM examenes WHERE perfilId = :perfilId ORDER BY fecha ASC")
-    fun getByPerfil(perfilId: Long): Flow<List<Examen>>
+    @Query("SELECT * FROM examenes WHERE pacienteId=:pacienteId ORDER BY fecha ASC")
+    fun getByPaciente(pacienteId: Long): Flow<List<Examen>>
 
     @Insert
     suspend fun insert(examen:Examen): Long

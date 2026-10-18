@@ -9,19 +9,18 @@ import androidx.room.PrimaryKey
     tableName = "medicamentos",
     foreignKeys = [
         ForeignKey(
-            entity = Perfil::class,
+            entity = Paciente::class,
             parentColumns = ["id"],
-            childColumns = ["perfilId"],
+            childColumns = ["pacienteId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("perfilId")]
+    indices = [Index("pacienteId")]
 )
 data class Medicamento(
     @PrimaryKey(autoGenerate = true) val id: Long=0,
-    val perfilId: Long,
+    val pacienteId: Long,
     val nombre: String,
     val dosis: String,
-    val documentoUri: String?=null,
-    val horaRecordatorio: String?=null
+    val documentoUri: String?=null
 )

@@ -10,18 +10,31 @@ Aplicación móvil diseñada para el registro, organización y seguimiento de la
 - **ML Kit Document Scanner** - escaneo y adjunto de documentos (recetas medicas y examenes)
 - **AlarmManager** + **BroadcastReceiver** - recordatorios diarios de medicamentos y notificaciones previas a horas medicas
 - **PdfDocument** (API nativa de Android, sin librerias externas) - generacion y exportacion del historial medico en PDF
+- **JUnit**, **Compose UI Test** y **Espresso** - pruebas unitarias e instrumentadas
 
 ## Arquitectura y Privacidad
 
-Esta aplicación almacena toda la información de forma local en el dispositivo, sin backend ni servidor externo. La decisión considera que la Ley N° 19.628, modificada por la Ley N° 21.719,  clasifica los datos de salud como datos sensibles: mantenerlos en el dispositivo evita transmitirlos o almacenarlos en servidores externos.
+Esta aplicación almacena toda la información de forma local en el dispositivo, sin backend ni servidor externo. La decisión considera que la Ley N° 19.628, modificada por la Ley N° 21.719, clasifica los datos de salud como datos sensibles: mantenerlos en el dispositivo evita transmitirlos o almacenarlos en servidores externos. Esto no constituye una declaración de cumplimiento normativo.
+
+Seguridad actual: el PIN se guarda como hash SHA-256 dentro de EncryptedSharedPreferences (Android Keystore). La base de datos Room **no esta cifrada** (pendiente).
 
 El codigo esta organizado por paquetes segun responsabilidad:
 - `ui/auth` - pantallas de bloqueo, creacion y validacion de PIN
-- `ui/historial` - lista de perfiles, pantalla de detalle por perfil, y las secciones de Medicamentos, Horas Medicas y Examenes
+- `ui/perfil` - pantalla inicial para crear el perfil del titular
+- `ui/historial` - lista de pacientes, detalle por paciente, y las secciones de Medicamentos (con el control de tomas), Horas Medicas, Examenes y presion arterial
+- `ui/components` - selectores reutilizables de fecha y hora
 - `data` - entidades y DAOs de Room
-- `security` - biometria y manejo del PIN cifrado
+- `security` - biometría, manejo del PIN cifrado y regla para crear el PIN
 - `alarms` - programacion de recordatorios y receivers de notificaciones
 - `export` - generacion del PDF del historial
+- `util` - utilidades de formato y conversión de fechas
+
+## Modelo de datos
+
+La base de datos esta en la versión 7. Un **Perfil** representa al titular del dispositivo y agrupa a sus **Pacientes** (el propio titular y/o personas a su cargo). 
+De cada paciente dependen sus **Medicamentos**, **Horas Medicas**, **Exámenes** y registros de **Presión Arterial**. Los recordatorios se guardan en la tabla **Alarma** (varias por medicamento, o una por hora medica) y las tomas en **ControlToma**.
+
+Desde la version 7 el esquema se exporta en `app/schemas` y los cambios de estructura se hacen con migraciones. El borrado destructivo queda limitado a las versiones anteriores a la 7.
 
 ## Estrategia de Ramas (GitFlow)
 
@@ -33,6 +46,14 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/historial-medico** - módulo de registro de historial médico
 - **feature/alarmas-recordatorios** - módulo de notificaciones
 - **feature/exportacion** - módulo de exportacion/compartición de datos
+- **feature/room-v7** - rediseño de la base de datos (pacientes, alarmas y nuevas tablas)
+- **feature/presion-arterial** - registro de presión arterial
+- **feature/recordatorios-horas-medicas** - anticipacion del recordatorio y reprogramacion de alarmas
+- **feature/control-tomas** - control diario de tomas de medicamentos
+- **feature/pruebas-e2e** - pruebas de extremo a extremo del flujo de exportacion a PDF
+- **feature/pruebas-unitarias** - pruebas unitarias de fechas, alarmas y regla del PIN
+- **feature/pruebas-integracion** - pruebas de integración de la base de datos y del PIN
+- **feature/prueba-e2e-presion** - pruebas de extremo a extremo del registro de presión arterial
 
 ## Como Correr el Proyecto
 
@@ -44,14 +65,29 @@ Este proyecto sigue el modelo GitFlow:
 
 ## Estado Actual
 
-- **Autenticacion:** biometria y PIN de respaldo funcionando, con el PIN cifrado mediante EncryptedSharedPreferences (Android Keystore).
-- **Historial medico:** funcional y probado, entidades `Perfil`, `Medicamento`, `HoraMedica` y `Examen` (Room), CRUD completo para cada una. Medicamentos y Examenes soportan escaneo y adjunto de documentos reales mediante ML Kit Document Scanner.
-- **Alarmas y recordatorios:** terminado. Recordatorio diario por hora fija para medicamentos, y recordatorio puntual (fecha y hora) para horas medicas, ambos con notificación. Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar bateria.
-- **Exportacion:** terminado. Genera un PDF con el historial completo de un perfil (medicamentos, horas medicas y examenes, incluyendo las imagenes escaneadas adjuntas) y lo comparte mediante el selector de apps del sistema.
-- **Integracion:** `feature/autenticacion`, `feature/historial-medico`, `feature/alarmas-recordatorios` y `feature/exportacion` ya fusionadas en `develop` - la app unifica login, registro de historial medico, recordatorios y exportacion en un solo flujo. `PerfilesScreen` se divide en una pantalla de lista y una pantalla de detalle por perfil, con navegacion entre ambas.
-- **CI/CD**: GitHub Actions compila el proyecto automaticamente en cada push.
+- **Autenticación:** biometría y PIN de respaldo funcionando.
+- **Perfil y pacientes:** en el primer inicio se crea el perfil del titular, con la opción de registrarse también como paciente. Desde la lista se agregan y eliminan pacientes.
+- **Historial médico:** registro y eliminación de medicamentos, horas médicas y exámenes por paciente. Medicamentos y exámenes permiten escanear y adjuntar documentos con ML Kit Document Scanner. Las fechas y horas se eligen con calendario y reloj.
+- **Presión arterial:** registro de mediciones por paciente (sistólica, diastólica, pulso opcional, fecha y hora), con validación de rangos. La aplicación registra y muestra valores, no los interpreta.
+- **Control de tomas:** los medicamentos con recordatorios muestran una casilla por cada hora para marcar la toma del día, junto al resumen "Tomas de hoy: X de N". Las marcas se guardan por día: al cambiar el día, las casillas parten vacias.
+- **Alarmas y recordatorios:** varios recordatorios diarios por medicamento y un recordatorio por hora médica, eligiendo con cuánta anticipación avisar (30 minutos, 1 hora, 2 horas o 1 día). Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar batería. Las alarmas se reprograman al reiniciar el dispositivo, al actualizar la aplicación y al volver a abrirla.
+- **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
+- **CI/CD:** GitHub Actions compila el proyecto y ejecuta las pruebas unitarias en cada push.
+- **Pruebas:**
+  - 16 casos unitarios (conversión de fechas, reglas de las alarmas y reglas del PIN), que el CI ejecuta en cada push
+  - 9 casos de integracion sobre la base de datos (creacion del perfil, medicamentos con alarmas y borrado en cascada de un paciente) y sobre el PIN cifrado.
+  - 2 pruebas de extremo a extremo que entran con PIN: exportar el PDF de un paciente y registrar una presion arterial.
+  - Las de integración y extremo a extremo se ejecutan desde Android Studio en un emulador; el CI no las ejecuta.
+
+## En Desarrollo y Pendiente
+
+- **Solicitudes de exámenes:** el estado del examen (solicitado, agendado, realizado) hoy se deduce de los datos ingresados; falta el selector de estado y el vínculo con una hora médica.
+- **Ingreso de medicamentos por reconocimiento de texto** de la receta y la caja.
+- **Acceso simplificado para emergencias.**
+- **Seguridad:** cifrado de la base de datos y límite de intentos de PIN.
+
 
 
 ## Licencia
 
-Este proyecto usa licencia MIT, -ver archivo [LICENSE](LICENSE)
+Este proyecto usa licencia MIT, ver archivo [LICENSE](LICENSE)

@@ -9,20 +9,19 @@ import androidx.room.PrimaryKey
     tableName = "horas_medicas",
     foreignKeys = [
         ForeignKey(
-            entity = Perfil::class,
+            entity = Paciente::class,
             parentColumns = ["id"],
-            childColumns = ["perfilId"],
+            childColumns = ["pacienteId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices=[Index("perfilId")]
+    indices=[Index("pacienteId")]
 )
 
 data class HoraMedica(
     @PrimaryKey(autoGenerate = true) val id: Long=0,
-    val perfilId: Long,
+    val pacienteId: Long,
     val especialidad: String,
-    val fecha: String,
-    val lugar: String,
-    val recordatorioMillis: Long?=null
+    val fechaHora: Long,
+    val lugar: String
 )
