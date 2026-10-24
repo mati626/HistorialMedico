@@ -27,7 +27,7 @@ El codigo esta organizado por paquetes segun responsabilidad:
 - `security` - biometría, manejo del PIN cifrado y regla para crear el PIN
 - `alarms` - programacion de recordatorios y receivers de notificaciones
 - `export` - generacion del PDF del historial
-- `util` - utilidades de formato y conversión de fechas
+- `util` - utilidades de formato y conversión de fechas, y reglas de texto compartidas por los formularios
 
 ## Modelo de datos
 
@@ -54,6 +54,7 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/pruebas-unitarias** - pruebas unitarias de fechas, alarmas y regla del PIN
 - **feature/pruebas-integracion** - pruebas de integración de la base de datos y del PIN
 - **feature/prueba-e2e-presion** - pruebas de extremo a extremo del registro de presión arterial
+- **feature/validacion-entradas** - validación de los campos de texto (largo máximo, caracteres permitidos y espacios) y sus pruebas
 
 ## Como Correr el Proyecto
 
@@ -71,10 +72,11 @@ Este proyecto sigue el modelo GitFlow:
 - **Presión arterial:** registro de mediciones por paciente (sistólica, diastólica, pulso opcional, fecha y hora), con validación de rangos. La aplicación registra y muestra valores, no los interpreta.
 - **Control de tomas:** los medicamentos con recordatorios muestran una casilla por cada hora para marcar la toma del día, junto al resumen "Tomas de hoy: X de N". Las marcas se guardan por día: al cambiar el día, las casillas parten vacias.
 - **Alarmas y recordatorios:** varios recordatorios diarios por medicamento y un recordatorio por hora médica, eligiendo con cuánta anticipación avisar (30 minutos, 1 hora, 2 horas o 1 día). Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar batería. Las alarmas se reprograman al reiniciar el dispositivo, al actualizar la aplicación y al volver a abrirla.
+- **Validación de entradas:** los campos de texto libre (nombres, relación, medicamento, dosis, especialidad, lugar, tipo y resultado de examen) quitan los espacios sobrantes, tienen un largo máximo con contador y aceptan solo los caracteres que corresponden a cada campo (por ejemplo, el nombre de una persona solo admite letras, espacios, apostrofo y guion). Las reglas están en `util/ReglasTexto.kt` y las usan todos los formularios
 - **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
 - **CI/CD:** GitHub Actions compila el proyecto y ejecuta las pruebas unitarias en cada push.
 - **Pruebas:**
-  - 16 casos unitarios (conversión de fechas, reglas de las alarmas y reglas del PIN), que el CI ejecuta en cada push
+  - 27 casos unitarios (conversión de fechas, reglas de las alarmas, reglas del PIN y reglas de texto con entradas invalidas: vacias, solo espacios, demasiado largas, con numeros, emojis o simbolos), que el CI ejecuta en cada push
   - 9 casos de integracion sobre la base de datos (creacion del perfil, medicamentos con alarmas y borrado en cascada de un paciente) y sobre el PIN cifrado.
   - 2 pruebas de extremo a extremo que entran con PIN: exportar el PDF de un paciente y registrar una presion arterial.
   - Las de integración y extremo a extremo se ejecutan desde Android Studio en un emulador; el CI no las ejecuta.
