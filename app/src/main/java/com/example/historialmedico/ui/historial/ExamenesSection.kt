@@ -47,6 +47,8 @@ import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.ui.components.SelectorFechaDialog
 import com.example.historialmedico.util.Fechas
+import com.example.historialmedico.util.ReglasTexto
+import com.example.historialmedico.util.ReglasTexto.CampoTexto
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -54,7 +56,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
-fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
+fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
     val examenes by remember(paciente.id) { dao.getByPaciente(paciente.id) }.collectAsState(initial = emptyList())
     var tipo by remember { mutableStateOf("") }
     var fecha by remember { mutableStateOf<String?>(null) }
@@ -70,11 +72,11 @@ fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
     val scannerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { activityResult ->
-        if (activityResult.resultCode== Activity.RESULT_OK){
+        if (activityResult.resultCode == Activity.RESULT_OK) {
             val escaneo = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
             val paginas = escaneo?.pages
-            if(!paginas.isNullOrEmpty()){
-                documentoUri=paginas[0].imageUri.toString()
+            if (!paginas.isNullOrEmpty()) {
+                documentoUri = paginas[0].imageUri.toString()
             }
         }
     }
@@ -90,22 +92,30 @@ fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
 
 
 
-    Column(modifier =
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+    ) {
         Text(
             "Examenes de ${paciente.nombre}",
-            style=MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         examenes.forEach { examen ->
             Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ){
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -143,7 +153,7 @@ fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
                         Icon(
                             imageVector = Icons.Filled.Delete,
                             contentDescription = "Eliminar examen",
-                            tint= MaterialTheme.colorScheme.error
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
@@ -151,19 +161,19 @@ fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
         }
         examenAEliminar?.let { examen ->
             AlertDialog(
-                onDismissRequest = {examenAEliminar=null},
-                title = {Text("Eliminar examen")},
-                text = {Text("Seguro que quiere eliminar este examen?")},
+                onDismissRequest = { examenAEliminar = null },
+                title = { Text("Eliminar examen") },
+                text = { Text("Seguro que quiere eliminar este examen?") },
                 confirmButton = {
                     TextButton(onClick = {
                         scope.launch { dao.delete(examen) }
-                        examenAEliminar=null
+                        examenAEliminar = null
                     }) {
                         Text("Eliminar")
                     }
                 },
-                dismissButton={
-                    TextButton(onClick = {examenAEliminar=null}) {
+                dismissButton = {
+                    TextButton(onClick = { examenAEliminar = null }) {
                         Text("Cancelar")
                     }
                 }
@@ -171,70 +181,76 @@ fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
         }
 
         OutlinedTextField(
-            value=tipo,
-            onValueChange = {tipo=it},
-            label = {Text("Tipo de Examen")},
+            value = tipo,
+            onValueChange = { if (it.length <= CampoTexto.TIPO_EXAMEN.maximo) tipo = it },
+            label = { Text("Tipo de Examen") },
+            supportingText = { Text("${tipo.length}/${CampoTexto.TIPO_EXAMEN.maximo}") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(
-            onClick = {mostrarSelectorFecha=true},
+            onClick = { mostrarSelectorFecha = true },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(fecha?.let { "Fecha: ${Fechas.isoAVisible(it)}" } ?: "Elegir fecha (opcional)")
         }
         if (fecha != null) {
-            TextButton(onClick = {fecha=null}) {
+            TextButton(onClick = { fecha = null }) {
                 Text("Quitar fecha")
             }
         }
         if (mostrarSelectorFecha) {
             SelectorFechaDialog(
                 onConfirmar = {
-                    fecha=Fechas.utcMillisAIso(it)
-                    mostrarSelectorFecha=false
+                    fecha = Fechas.utcMillisAIso(it)
+                    mostrarSelectorFecha = false
                 },
-                onCancelar = {mostrarSelectorFecha=false}
+                onCancelar = { mostrarSelectorFecha = false }
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = resultado,
-            onValueChange = {resultado=it},
-            label = {Text("Resultado (opcional)")},
+            onValueChange = { if (it.length <= CampoTexto.RESULTADO.maximo) resultado = it },
+            label = { Text("Resultado (opcional)") },
+            supportingText = { Text("${resultado.length}/${CampoTexto.RESULTADO.maximo}") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             scanner.getStartScanIntent(activity)
-                .addOnSuccessListener { intentSender -> scannerLauncher
-                    .launch(IntentSenderRequest.Builder(intentSender).build())
+                .addOnSuccessListener { intentSender ->
+                    scannerLauncher
+                        .launch(IntentSenderRequest.Builder(intentSender).build())
                 }
                 .addOnFailureListener {
-                    error="No se logro abrir el escaner"
+                    error = "No se logro abrir el escaner"
                 }
         }) {
-            Text(if(documentoUri==null)"Escanear Documento" else "Documento escaneado (volver a escanear)")
+            Text(if (documentoUri == null) "Escanear Documento" else "Documento escaneado (volver a escanear)")
         }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
-            when{
-                tipo.isBlank()->error="El tipo de examen es obligatorio"
-                else->{
-                    val tipoAGuardar = tipo.trim()
+            val errorTexto = ReglasTexto.validar(tipo, CampoTexto.TIPO_EXAMEN)
+                ?: ReglasTexto.validar(resultado, CampoTexto.RESULTADO, obligatorio = false)
+            when {
+                errorTexto != null -> error = errorTexto
+                else -> {
+                    val tipoAGuardar = ReglasTexto.normalizar(tipo)
                     val fechaAGuardar = fecha
-                    val resultadoAGuardar = resultado.trim().ifBlank { null }
+                    val resultadoAGuardar = ReglasTexto.normalizar(resultado).ifBlank { null }
                     val documentoAGuardar = documentoUri
                     val estadoAGuardar = when {
                         resultadoAGuardar != null -> EstadoExamen.REALIZADO
                         fechaAGuardar != null -> EstadoExamen.AGENDADO
                         else -> EstadoExamen.SOLICITADO
                     }
-                    tipo=""
-                    fecha=null
-                    resultado=""
-                    documentoUri=null
-                    error=null
+                    tipo = ""
+                    fecha = null
+                    resultado = ""
+                    documentoUri = null
+                    error = null
                     scope.launch {
                         dao.insert(
                             Examen(
@@ -254,8 +270,10 @@ fun ExamenesSection(dao: ExamenDao,paciente: Paciente){
         }
         error?.let {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(it,color=MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall)
+            Text(
+                it, color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
