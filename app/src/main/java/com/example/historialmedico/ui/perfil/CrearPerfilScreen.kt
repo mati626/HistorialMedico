@@ -28,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.PerfilDao
+import com.example.historialmedico.util.ReglasTexto
+import com.example.historialmedico.util.ReglasTexto.CampoTexto
 import kotlinx.coroutines.launch
 
 @Composable
@@ -60,8 +62,9 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
         )
         OutlinedTextField(
             value = nombre,
-            onValueChange = { nombre = it },
+            onValueChange = { if (it.length <= CampoTexto.NOMBRE_PERSONA.maximo) nombre = it },
             label = { Text("Tu nombre") },
+            supportingText = { Text("${nombre.length}/${CampoTexto.NOMBRE_PERSONA.maximo}") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -100,9 +103,10 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
         Button(
             enabled = !guardando,
             onClick = {
-                val nombreLimpio = nombre.trim()
-                if (nombreLimpio.isBlank()) {
-                    error = "El nombre es obligatorio"
+                val nombreLimpio = ReglasTexto.normalizar(nombre)
+                val errorNombre = ReglasTexto.validar(nombre, CampoTexto.NOMBRE_PERSONA)
+                if (errorNombre != null) {
+                    error = errorNombre
                 } else {
                     error = null
                     guardando = true

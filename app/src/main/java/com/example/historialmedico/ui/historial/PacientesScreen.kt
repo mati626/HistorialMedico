@@ -51,6 +51,8 @@ import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PacienteDao
 import com.example.historialmedico.data.PresionArterialDao
 import com.example.historialmedico.ui.perfil.CrearPerfilScreen
+import com.example.historialmedico.util.ReglasTexto.CampoTexto
+import com.example.historialmedico.util.ReglasTexto
 
 @Composable
 fun PacientesScreen(
@@ -70,33 +72,34 @@ fun PacientesScreen(
 
     LaunchedEffect(perfilDao) {
         perfilDao.getPerfil().collect {
-            perfil=it
-            cargando=false
+            perfil = it
+            cargando = false
         }
     }
 
-    val perfilActual=perfil
-    val paciente=pacienteSeleccionado
-    when{
-        cargando->Box(modifier=modifier.fillMaxSize())
-        perfilActual==null->CrearPerfilScreen(perfilDao=perfilDao, modifier=modifier)
-        paciente!=null->PacienteDetalleScreen(
-            paciente=paciente,
-            medicamentoDao=medicamentoDao,
-            horaMedicaDao=horaMedicaDao,
-            controlTomaDao=controlTomaDao,
-            examenDao=examenDao,
-            alarmaDao=alarmaDao,
+    val perfilActual = perfil
+    val paciente = pacienteSeleccionado
+    when {
+        cargando -> Box(modifier = modifier.fillMaxSize())
+        perfilActual == null -> CrearPerfilScreen(perfilDao = perfilDao, modifier = modifier)
+        paciente != null -> PacienteDetalleScreen(
+            paciente = paciente,
+            medicamentoDao = medicamentoDao,
+            horaMedicaDao = horaMedicaDao,
+            controlTomaDao = controlTomaDao,
+            examenDao = examenDao,
+            alarmaDao = alarmaDao,
             presionArterialDao = presionArterialDao,
-            modifier=modifier,
-            onBack={pacienteSeleccionado=null}
+            modifier = modifier,
+            onBack = { pacienteSeleccionado = null }
         )
-        else->ListaPacientesScreen(
-           perfil=perfilActual,
-            pacienteDao=pacienteDao,
-            alarmaDao=alarmaDao,
-            modifier=modifier,
-            onPacienteClick={pacienteSeleccionado=it}
+
+        else -> ListaPacientesScreen(
+            perfil = perfilActual,
+            pacienteDao = pacienteDao,
+            alarmaDao = alarmaDao,
+            modifier = modifier,
+            onPacienteClick = { pacienteSeleccionado = it }
         )
     }
 }
@@ -106,10 +109,11 @@ private fun ListaPacientesScreen(
     perfil: Perfil,
     pacienteDao: PacienteDao,
     alarmaDao: AlarmaDao,
-    modifier: Modifier= Modifier,
-    onPacienteClick:(Paciente)-> Unit
-){
-    val pacientes by remember(perfil.id){pacienteDao.getByPerfil(perfil.id)
+    modifier: Modifier = Modifier,
+    onPacienteClick: (Paciente) -> Unit
+) {
+    val pacientes by remember(perfil.id) {
+        pacienteDao.getByPerfil(perfil.id)
     }
         .collectAsState(initial = emptyList())
     var nombre by remember { mutableStateOf("") }
@@ -120,27 +124,31 @@ private fun ListaPacientesScreen(
     var pacienteAEliminar by remember { mutableStateOf<Paciente?>(null) }
 
 
-    Column(modifier=modifier
-        .fillMaxSize()
-        .imePadding()
-        .padding(16.dp)) {
-        Text("Pacientes", style= MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Spacer(modifier= Modifier.height(16.dp))
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding()
+            .padding(16.dp)
+    ) {
+        Text("Pacientes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
 
-        LazyColumn(modifier= Modifier.weight(1f)) {
-            if(pacientes.isEmpty()){
-                item{
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            if (pacientes.isEmpty()) {
+                item {
                     Text(
                         "No hay pacientes todavia, agrega uno abajo",
-                        style=MaterialTheme.typography.bodyMedium,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier=Modifier.padding(vertical = 16.dp)
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 16.dp)
                     )
                 }
             }
             items(pacientes) { paciente ->
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
                         .clickable {
                             onPacienteClick(paciente)
                         },
@@ -156,25 +164,25 @@ private fun ListaPacientesScreen(
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier=Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 paciente.nombre,
-                                style=MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 paciente.relacion,
-                                style= MaterialTheme.typography.bodySmall,
-                                color= MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         IconButton(onClick = {
-                            pacienteAEliminar=paciente
+                            pacienteAEliminar = paciente
                         }) {
                             Icon(
-                                imageVector= Icons.Filled.Delete,
+                                imageVector = Icons.Filled.Delete,
                                 contentDescription = "Eliminar paciente",
-                                tint= MaterialTheme.colorScheme.error
+                                tint = MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -182,38 +190,52 @@ private fun ListaPacientesScreen(
             }
         }
         Card(
-            modifier=Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            border = BorderStroke(1.dp,MaterialTheme.colorScheme.outline)) {
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 OutlinedTextField(
                     value = nombre,
-                    onValueChange = { nombre = it },
+                    onValueChange = {
+                        if (it.length <= CampoTexto.NOMBRE_PERSONA.maximo
+                        )nombre = it
+                    },
                     label = { Text("Nombre") },
+                    supportingText = {
+                        Text("${nombre.length}/${CampoTexto.NOMBRE_PERSONA.maximo}")
+                    },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = relacion,
-                    onValueChange = { relacion = it },
+                    onValueChange = { if (it.length <= CampoTexto.RELACION.maximo) relacion = it },
                     label = { Text("Relacion (ej:Yo, Hijo/a, Padre)") },
+                    supportingText = { Text("${relacion.length}/${CampoTexto.RELACION.maximo}") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = {
-                            val nombreAGuardar = nombre.trim()
-                            val relacionAGuardar = relacion.trim()
-                        if(nombreAGuardar.isBlank()||relacionAGuardar.isBlank()){
-                        error = "El nombre y la relacion son obligatorios"
-                    }else{
+                        val nombreAGuardar = ReglasTexto.normalizar(nombre)
+                        val relacionAGuardar = ReglasTexto.normalizar(relacion)
+                        val errorFormulario = ReglasTexto.validar(nombre, CampoTexto.NOMBRE_PERSONA)
+                            ?: ReglasTexto.validar(relacion, CampoTexto.RELACION)
+                        if (errorFormulario != null) {
+                            error = errorFormulario
+                        } else {
                             nombre = ""
                             relacion = ""
-                        error=null
+                            error = null
                             scope.launch {
                                 pacienteDao.insert(
                                     Paciente(
-                                        perfilId=perfil.id,
+                                        perfilId = perfil.id,
                                         nombre = nombreAGuardar,
                                         relacion = relacionAGuardar
                                     )
@@ -226,37 +248,39 @@ private fun ListaPacientesScreen(
                     Text("Agregar")
                 }
                 error?.let {
-                    Spacer(modifier= Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         it,
-                        color= MaterialTheme.colorScheme.error,
-                        style= MaterialTheme.typography.bodySmall
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
         }
-        pacienteAEliminar?.let { paciente -> AlertDialog(
-            onDismissRequest = {pacienteAEliminar=null},
-            title = {Text("Eliminar paciente")},
-            text = {Text("Seguro que quieres eliminar a ${paciente.nombre}? Se eliminaran tambien todos sus medicamentos, horas medicas y examenes.")},
-            confirmButton = {
-                TextButton(onClick = {
-                    pacienteAEliminar=null
-                    scope.launch { alarmaDao.getIdsByPaciente(paciente.id).forEach {
-                        alarmaId->
-                        AlarmScheduler.cancelar(context,alarmaId)
+        pacienteAEliminar?.let { paciente ->
+            AlertDialog(
+                onDismissRequest = { pacienteAEliminar = null },
+                title = { Text("Eliminar paciente") },
+                text = { Text("Seguro que quieres eliminar a ${paciente.nombre}? Se eliminaran tambien todos sus medicamentos, horas medicas y examenes.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pacienteAEliminar = null
+                        scope.launch {
+                            alarmaDao.getIdsByPaciente(paciente.id).forEach { alarmaId ->
+                                AlarmScheduler.cancelar(context, alarmaId)
+                            }
+                            pacienteDao.delete(paciente)
+                        }
+                    }) {
+                        Text("Eliminar")
                     }
-                    pacienteDao.delete(paciente)
+                },
+                dismissButton = {
+                    TextButton(onClick = { pacienteAEliminar = null }) {
+                        Text("Cancelar")
                     }
-                }) {
-                    Text("Eliminar")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = {pacienteAEliminar=null}) {
-                    Text("Cancelar")
-                }
-            }
-        ) }
+            )
+        }
     }
 }
