@@ -80,12 +80,16 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
 
         horas.forEach { hora ->
             Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -96,10 +100,14 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val alarma = alarmasPorHoraMedica[hora.id].orEmpty().firstOrNull()
-                            val momentoRecordatorio=alarma?.fechaHoraMillis
-                        if (alarma != null && momentoRecordatorio!=null) {
+                        val momentoRecordatorio = alarma?.fechaHoraMillis
+                        if (alarma != null && momentoRecordatorio != null) {
                             Text(
-                                if(alarma.activo) "Recordatorio: ${Fechas.fechaHoraVisible(momentoRecordatorio)}"
+                                if (alarma.activo) "Recordatorio: ${
+                                    Fechas.fechaHoraVisible(
+                                        momentoRecordatorio
+                                    )
+                                }"
                                 else "Recordatorio enviado",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -110,7 +118,7 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
                         Icon(
                             imageVector = Icons.Filled.Delete,
                             contentDescription = "Eliminar hora medica",
-                            tint= MaterialTheme.colorScheme.error
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
@@ -165,30 +173,30 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Box{
+        Box {
             OutlinedButton(
-                onClick = {menuRecordatorioAbierto=true},
+                onClick = { menuRecordatorioAbierto = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Recordatorio: ${anticipacion?.etiqueta?: "sin recordatorio"}")
+                Text("Recordatorio: ${anticipacion?.etiqueta ?: "sin recordatorio"}")
             }
             DropdownMenu(
                 expanded = menuRecordatorioAbierto,
-                onDismissRequest = {menuRecordatorioAbierto=false}
+                onDismissRequest = { menuRecordatorioAbierto = false }
             ) {
                 DropdownMenuItem(
-                    text = {Text("Sin recordatorio")},
-                    onClick={
-                        anticipacion=null
+                    text = { Text("Sin recordatorio") },
+                    onClick = {
+                        anticipacion = null
                         menuRecordatorioAbierto = false
                     }
                 )
-                Anticipacion.entries.forEach{ opcion ->
+                Anticipacion.entries.forEach { opcion ->
                     DropdownMenuItem(
-                        text={Text(opcion.etiqueta)},
-                        onClick={
-                            anticipacion=opcion
-                            menuRecordatorioAbierto=false
+                        text = { Text(opcion.etiqueta) },
+                        onClick = {
+                            anticipacion = opcion
+                            menuRecordatorioAbierto = false
                         }
                     )
                 }
@@ -209,16 +217,17 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
             val fechaHoraElegida = fechaHora
             val anticipacionElegida = anticipacion
             val ahora = System.currentTimeMillis()
-            val recordatorioElegido=
-                if (fechaHoraElegida!=null && anticipacionElegida != null)
-                    fechaHoraElegida-anticipacionElegida.minutos * 60_000L
-            else null
+            val recordatorioElegido =
+                if (fechaHoraElegida != null && anticipacionElegida != null)
+                    fechaHoraElegida - anticipacionElegida.minutos * 60_000L
+                else null
             when {
                 especialidad.isBlank() -> error = "La especialidad es obligatoria"
                 lugar.isBlank() -> error = "El lugar es obligatorio"
                 fechaHoraElegida == null -> error = "La fecha y hora son obligatorias"
                 recordatorioElegido != null && recordatorioElegido <= ahora ->
                     error = "Ese recordatorio ya paso: elige una anticipacion menor o quitalo"
+
                 else -> {
                     val horaMedica = HoraMedica(
                         pacienteId = paciente.id,
@@ -254,7 +263,8 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
         }
     }
 }
-private enum class Anticipacion(val minutos: Int, val etiqueta: String){
+
+private enum class Anticipacion(val minutos: Int, val etiqueta: String) {
     TREINTA_MINUTOS(30, "30 minutos antes"),
     UNA_HORA(60, "1 hora antes"),
     DOS_HORAS(120, "2 horas antes"),
