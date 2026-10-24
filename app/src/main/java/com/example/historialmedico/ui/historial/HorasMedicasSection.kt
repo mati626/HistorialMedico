@@ -44,6 +44,8 @@ import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.ui.components.SelectorFechaHoraDialog
 import com.example.historialmedico.util.Fechas
+import com.example.historialmedico.util.ReglasTexto
+import com.example.historialmedico.util.ReglasTexto.CampoTexto
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -151,15 +153,19 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
 
         OutlinedTextField(
             value = especialidad,
-            onValueChange = { especialidad = it },
+            onValueChange = { if (it.length <= CampoTexto.ESPECIALIDAD.maximo) especialidad = it },
             label = { Text("Especialidad") },
+            supportingText = { Text("${especialidad.length}/${CampoTexto.ESPECIALIDAD.maximo}") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = lugar,
-            onValueChange = { lugar = it },
+            onValueChange = { if (it.length <= CampoTexto.LUGAR.maximo) lugar = it },
             label = { Text("Lugar") },
+            supportingText = { Text("${lugar.length}/${CampoTexto.LUGAR.maximo}") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -221,9 +227,12 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
                 if (fechaHoraElegida != null && anticipacionElegida != null)
                     fechaHoraElegida - anticipacionElegida.minutos * 60_000L
                 else null
+            val especialidadAGuardar = ReglasTexto.normalizar(especialidad)
+            val lugarAGuardar = ReglasTexto.normalizar(lugar)
+            val errorTexto = ReglasTexto.validar(especialidad, CampoTexto.ESPECIALIDAD)
+                ?: ReglasTexto.validar(lugar, CampoTexto.LUGAR)
             when {
-                especialidad.isBlank() -> error = "La especialidad es obligatoria"
-                lugar.isBlank() -> error = "El lugar es obligatorio"
+                errorTexto != null -> error = errorTexto
                 fechaHoraElegida == null -> error = "La fecha y hora son obligatorias"
                 recordatorioElegido != null && recordatorioElegido <= ahora ->
                     error = "Ese recordatorio ya paso: elige una anticipacion menor o quitalo"
@@ -231,9 +240,9 @@ fun HorasMedicasSection(dao: HoraMedicaDao, alarmaDao: AlarmaDao, paciente: Paci
                 else -> {
                     val horaMedica = HoraMedica(
                         pacienteId = paciente.id,
-                        especialidad = especialidad.trim(),
+                        especialidad = especialidadAGuardar,
                         fechaHora = fechaHoraElegida,
-                        lugar = lugar.trim()
+                        lugar = lugarAGuardar
                     )
                     especialidad = ""
                     lugar = ""
