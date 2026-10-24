@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.example.historialmedico.data.EstadoExamen
 import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.data.Paciente
@@ -68,6 +69,7 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
     var resultado by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var examenAEliminar by remember { mutableStateOf<Examen?>(null) }
+    var examenAMarcar by remember { mutableStateOf<Examen?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val activity = context as Activity
@@ -135,6 +137,12 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        if (examen.estado != EstadoExamen.REALIZADO) {
+                            TextButton(onClick = { examenAMarcar = examen })
+                            {
+                                Text("Marcar como realizado")
+                            }
+                        }
                     }
                     if (examen.documentoUri != null) {
                         TextButton(onClick = {
@@ -181,6 +189,25 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                         Text("Cancelar")
                     }
                 }
+            )
+        }
+
+        examenAMarcar?.let { examen ->
+            MarcarRealizadoDialog(
+                examen = examen,
+                onConfirmar = {fechaRealizado,resultadoRealizado ->
+                    scope.launch {
+                        dao.update(
+                            examen.copy(
+                                estado = EstadoExamen.REALIZADO,
+                                fecha = fechaRealizado,
+                                resultado = resultadoRealizado
+                            )
+                        )
+                    }
+                    examenAMarcar = null
+                },
+                onCancelar = {examenAMarcar=null}
             )
         }
 
@@ -300,5 +327,90 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                 style = MaterialTheme.typography.bodySmall
             )
         }
+    }
+}
+
+@Composable
+private fun MarcarRealizadoDialog(
+    examen: Examen,
+    onConfirmar: (fecha: String, resultado: String?) -> Unit,
+    onCancelar: () -> Unit
+) {
+    var fecha by remember {
+        mutableStateOf(examen.fecha?.takeIf {
+            ReglasExamen.validarFecha(true, it, Fechas.hoyIso()) == null
+        })
+    }
+    var resultado by remember { mutableStateOf("") }
+    var mostrarSelectorFecha by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("Marcar como realizado") },
+        text = {
+            Column {
+                Text(examen.tipo)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { mostrarSelectorFecha = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(fecha?.let { "Fecha: ${Fechas.isoAVisible(it)}" }
+                        ?: "Elegir fecha en que se realizó")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = resultado,
+                    onValueChange = {
+                        if (it.length <= CampoTexto.RESULTADO.maximo) resultado = it
+                    },
+                    label = { Text("Resultado (opcional)") },
+                    supportingText = {
+                        Text("${resultado.length}/${CampoTexto.RESULTADO.maximo}")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                error?.let {
+                    Text(
+                        it, color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val fechaElegida = fecha
+                val errorEncontrado = ReglasExamen.validarFecha(
+                    true,
+                    fechaElegida, Fechas.hoyIso()
+                )
+                    ?: ReglasTexto.validar(
+                        resultado,
+                        CampoTexto.RESULTADO, obligatorio = false
+                    )
+                when {
+                    errorEncontrado != null -> error = errorEncontrado
+                    fechaElegida != null -> onConfirmar(
+                        fechaElegida,
+                        ReglasTexto.normalizar(resultado).ifBlank { null })
+                }
+            }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text("Cancelar") }
+        }
+    )
+    if (mostrarSelectorFecha) {
+        SelectorFechaDialog(
+            onConfirmar = {
+                fecha = Fechas.utcMillisAIso(it)
+                mostrarSelectorFecha = false
+            },
+            onCancelar = { mostrarSelectorFecha = false }
+        )
     }
 }
