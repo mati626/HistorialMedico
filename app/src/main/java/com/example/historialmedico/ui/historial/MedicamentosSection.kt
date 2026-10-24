@@ -58,6 +58,8 @@ import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.ui.components.SelectorHoraDialog
 import com.example.historialmedico.util.Fechas
+import com.example.historialmedico.util.ReglasTexto
+import com.example.historialmedico.util.ReglasTexto.CampoTexto
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -257,15 +259,27 @@ fun MedicamentosSection(
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = nombre,
-                onValueChange = { nombre = it },
+                onValueChange = {
+                    if (it.length <= CampoTexto.MEDICAMENTO.maximo) nombre = it
+                },
                 label = { Text("Nombre") },
+                supportingText = {
+                    Text("${nombre.length}/${CampoTexto.MEDICAMENTO.maximo}")
+                },
+                singleLine = true,
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedTextField(
                 value = dosis,
-                onValueChange = { dosis = it },
+                onValueChange = {
+                    if (it.length <= CampoTexto.DOSIS.maximo) dosis = it
+                },
                 label = { Text("Dosis") },
+                supportingText = {
+                    Text("${dosis.length}/${CampoTexto.DOSIS.maximo}")
+                },
+                singleLine = true,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -309,10 +323,14 @@ fun MedicamentosSection(
             Text(if (documentoUri == null) "Escanear Receta" else "Receta escaneada (volver a escanear)")
         }
         Spacer(modifier = Modifier.height(8.dp))
+
         Button(onClick = {
+            val nombreAGuardar = ReglasTexto.normalizar(nombre)
+            val dosisAGuardar = ReglasTexto.normalizar(dosis)
+            val errorTexto = ReglasTexto.validar(nombre, CampoTexto.MEDICAMENTO)
+                ?: ReglasTexto.validar(dosis, CampoTexto.DOSIS)
             when {
-                nombre.isBlank() -> error = "El nombre del medicamento es obligatorio"
-                dosis.isBlank() -> error = "La dosis es obligatoria"
+                errorTexto != null -> error = errorTexto
                 !dosis.any { it.isDigit() } -> error =
                     "La dosis debe incluir un numero (ej: 500 mg)"
 
@@ -320,16 +338,17 @@ fun MedicamentosSection(
                     "Este paciente ya tiene el maximo de $MAX_MEDICAMENTOS_POR_PACIENTE medicamentos"
 
                 medicamentos.any {
-                    it.nombre.trim().equals(nombre.trim(), ignoreCase = true)
+                    ReglasTexto.normalizar(it.nombre).equals(nombreAGuardar, ignoreCase = true)
                 } -> error = "Ya existe un medicamento con ese nombre para este paciente"
 
                 else -> {
                     val medicamento = Medicamento(
                         pacienteId = paciente.id,
-                        nombre = nombre.trim(),
-                        dosis = dosis.trim(),
+                        nombre = nombreAGuardar,
+                        dosis = dosisAGuardar,
                         documentoUri = documentoUri
                     )
+
                     val horasAguardar = horas.toList()
                     nombre = ""
                     dosis = ""
