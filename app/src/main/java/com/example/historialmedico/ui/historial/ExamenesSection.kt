@@ -26,6 +26,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,10 +44,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.example.historialmedico.data.EstadoExamen
 import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.data.ReglasExamen
 import com.example.historialmedico.ui.components.SelectorFechaDialog
 import com.example.historialmedico.util.Fechas
 import com.example.historialmedico.util.ReglasTexto
@@ -59,6 +62,7 @@ import java.io.File
 fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
     val examenes by remember(paciente.id) { dao.getByPaciente(paciente.id) }.collectAsState(initial = emptyList())
     var tipo by remember { mutableStateOf("") }
+    var realizado by remember { mutableStateOf(false) }
     var fecha by remember { mutableStateOf<String?>(null) }
     var mostrarSelectorFecha by remember { mutableStateOf(false) }
     var resultado by remember { mutableStateOf("") }
@@ -189,11 +193,32 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = !realizado,
+                onClick = {
+                    realizado = false
+                    resultado = ""
+                },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+            ) {
+                Text("Próximo")
+            }
+            SegmentedButton(
+                selected = realizado,
+                onClick = { realizado = true },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+            ) {
+                Text("Realizado")
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(
             onClick = { mostrarSelectorFecha = true },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(fecha?.let { "Fecha: ${Fechas.isoAVisible(it)}" } ?: "Elegir fecha (opcional)")
+            Text(fecha?.let { "Fecha: ${Fechas.isoAVisible(it)}" }
+                ?: if (realizado) "Elegir fecha en que se realizó" else "Elegir fecha (opcional)")
         }
         if (fecha != null) {
             TextButton(onClick = { fecha = null }) {
@@ -209,14 +234,16 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                 onCancelar = { mostrarSelectorFecha = false }
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = resultado,
-            onValueChange = { if (it.length <= CampoTexto.RESULTADO.maximo) resultado = it },
-            label = { Text("Resultado (opcional)") },
-            supportingText = { Text("${resultado.length}/${CampoTexto.RESULTADO.maximo}") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        if (realizado) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = resultado,
+                onValueChange = { if (it.length <= CampoTexto.RESULTADO.maximo) resultado = it },
+                label = { Text("Resultado (opcional)") },
+                supportingText = { Text("${resultado.length}/${CampoTexto.RESULTADO.maximo}") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             scanner.getStartScanIntent(activity)
@@ -234,19 +261,17 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
         Button(onClick = {
             val errorTexto = ReglasTexto.validar(tipo, CampoTexto.TIPO_EXAMEN)
                 ?: ReglasTexto.validar(resultado, CampoTexto.RESULTADO, obligatorio = false)
+                ?: ReglasExamen.validarFecha(realizado, fecha, Fechas.hoyIso())
             when {
                 errorTexto != null -> error = errorTexto
                 else -> {
                     val tipoAGuardar = ReglasTexto.normalizar(tipo)
                     val fechaAGuardar = fecha
+                    val estadoAGuardar = ReglasExamen.estado(realizado, fechaAGuardar)
                     val resultadoAGuardar = ReglasTexto.normalizar(resultado).ifBlank { null }
                     val documentoAGuardar = documentoUri
-                    val estadoAGuardar = when {
-                        resultadoAGuardar != null -> EstadoExamen.REALIZADO
-                        fechaAGuardar != null -> EstadoExamen.AGENDADO
-                        else -> EstadoExamen.SOLICITADO
-                    }
                     tipo = ""
+                    realizado = false
                     fecha = null
                     resultado = ""
                     documentoUri = null
