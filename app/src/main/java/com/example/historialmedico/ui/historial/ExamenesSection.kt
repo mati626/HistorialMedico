@@ -138,8 +138,7 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                             )
                         }
                         if (examen.estado != EstadoExamen.REALIZADO) {
-                            TextButton(onClick = { examenAMarcar = examen })
-                            {
+                            TextButton(onClick = { examenAMarcar = examen }) {
                                 Text("Marcar como realizado")
                             }
                         }
@@ -195,7 +194,7 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
         examenAMarcar?.let { examen ->
             MarcarRealizadoDialog(
                 examen = examen,
-                onConfirmar = {fechaRealizado,resultadoRealizado ->
+                onConfirmar = { fechaRealizado, resultadoRealizado ->
                     scope.launch {
                         dao.update(
                             examen.copy(
@@ -207,7 +206,7 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                     }
                     examenAMarcar = null
                 },
-                onCancelar = {examenAMarcar=null}
+                onCancelar = { examenAMarcar = null }
             )
         }
 
