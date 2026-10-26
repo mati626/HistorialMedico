@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +50,8 @@ import androidx.core.content.FileProvider
 import com.example.historialmedico.data.EstadoExamen
 import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.ExamenDao
+import com.example.historialmedico.data.HoraMedica
+import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.ReglasExamen
 import com.example.historialmedico.ui.components.SelectorFechaDialog
@@ -60,7 +65,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
-fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
+fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paciente) {
     val examenes by remember(paciente.id) { dao.getByPaciente(paciente.id) }.collectAsState(initial = emptyList())
     var tipo by remember { mutableStateOf("") }
     var realizado by remember { mutableStateOf(false) }
@@ -74,6 +79,12 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
     val context = LocalContext.current
     val activity = context as Activity
     var documentoUri by remember { mutableStateOf<String?>(null) }
+    val horasMedicas by remember(paciente.id) {
+        horaMedicaDao.getByPaciente(paciente.id)
+    }.collectAsState(initial = emptyList())
+    val consultasPorId = horasMedicas.associateBy { it.id }
+    var consulta by remember { mutableStateOf<HoraMedica?>(null) }
+    var menuConsultaAbierto by remember { mutableStateOf(false) }
 
     val scannerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -137,6 +148,13 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        examen.horaMedicaId?.let { consultasPorId[it] }?.let { consultaExamen ->
+                            Text(
+                                "Solicitado en: ${textoConsulta(consultaExamen)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         if (examen.estado != EstadoExamen.REALIZADO) {
                             TextButton(onClick = { examenAMarcar = examen }) {
                                 Text("Marcar como realizado")
@@ -194,6 +212,8 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
         examenAMarcar?.let { examen ->
             MarcarRealizadoDialog(
                 examen = examen,
+                fechaConsulta = examen.horaMedicaId?.let { consultasPorId[it] }
+                    ?.let { Fechas.millisAIso(it.fechaHora) },
                 onConfirmar = { fechaRealizado, resultadoRealizado ->
                     scope.launch {
                         dao.update(
@@ -218,6 +238,37 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box {
+            OutlinedButton(
+                onClick = { menuConsultaAbierto = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Solicitado en: ${consulta?.let { textoConsulta(it) } ?: "sin consulta"}")
+            }
+            DropdownMenu(
+                expanded = menuConsultaAbierto,
+                onDismissRequest = { menuConsultaAbierto = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Sin consulta") },
+                    onClick = {
+                        consulta = null
+                        menuConsultaAbierto = false
+                    }
+                )
+                ReglasExamen.consultasPosibles(horasMedicas, System.currentTimeMillis())
+                    .forEach { opcion ->
+                        DropdownMenuItem(
+                            text = { Text(textoConsulta(opcion)) },
+                            onClick = {
+                                consulta = opcion
+                                menuConsultaAbierto = false
+                            }
+                        )
+                    }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             SegmentedButton(
@@ -288,6 +339,9 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
             val errorTexto = ReglasTexto.validar(tipo, CampoTexto.TIPO_EXAMEN)
                 ?: ReglasTexto.validar(resultado, CampoTexto.RESULTADO, obligatorio = false)
                 ?: ReglasExamen.validarFecha(realizado, fecha, Fechas.hoyIso())
+                ?: ReglasExamen.validarConsulta(
+                    fecha,
+                    consulta?.let { Fechas.millisAIso(it.fechaHora) })
             when {
                 errorTexto != null -> error = errorTexto
                 else -> {
@@ -296,11 +350,13 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                     val estadoAGuardar = ReglasExamen.estado(realizado, fechaAGuardar)
                     val resultadoAGuardar = ReglasTexto.normalizar(resultado).ifBlank { null }
                     val documentoAGuardar = documentoUri
+                    val consultaAGuardar = consulta?.id
                     tipo = ""
                     realizado = false
                     fecha = null
                     resultado = ""
                     documentoUri = null
+                    consulta = null
                     error = null
                     scope.launch {
                         dao.insert(
@@ -310,7 +366,8 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
                                 fecha = fechaAGuardar,
                                 resultado = resultadoAGuardar,
                                 estado = estadoAGuardar,
-                                documentoUri = documentoAGuardar
+                                documentoUri = documentoAGuardar,
+                                horaMedicaId = consultaAGuardar
                             )
                         )
                     }
@@ -332,6 +389,7 @@ fun ExamenesSection(dao: ExamenDao, paciente: Paciente) {
 @Composable
 private fun MarcarRealizadoDialog(
     examen: Examen,
+    fechaConsulta: String?,
     onConfirmar: (fecha: String, resultado: String?) -> Unit,
     onCancelar: () -> Unit
 ) {
@@ -385,6 +443,7 @@ private fun MarcarRealizadoDialog(
                     true,
                     fechaElegida, Fechas.hoyIso()
                 )
+                    ?: ReglasExamen.validarConsulta(fechaElegida, fechaConsulta)
                     ?: ReglasTexto.validar(
                         resultado,
                         CampoTexto.RESULTADO, obligatorio = false
@@ -413,3 +472,6 @@ private fun MarcarRealizadoDialog(
         )
     }
 }
+
+private fun textoConsulta(consulta: HoraMedica):
+        String = "${consulta.especialidad}, ${Fechas.fechaHoraVisible(consulta.fechaHora)}"

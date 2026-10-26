@@ -134,7 +134,7 @@ fun PacienteDetalleScreen(
             when (tabSeleccionado) {
                 0 -> MedicamentosSection(dao = medicamentoDao, alarmaDao=alarmaDao, controlTomaDao=controlTomaDao, paciente = paciente)
                 1 -> HorasMedicasSection(dao = horaMedicaDao,alarmaDao=alarmaDao, paciente = paciente)
-                2 -> ExamenesSection(dao = examenDao, paciente = paciente)
+                2 -> ExamenesSection(dao = examenDao, horaMedicaDao = horaMedicaDao, paciente = paciente)
                 3 -> PresionArterialSection(dao = presionArterialDao, paciente = paciente)
             }
         }
