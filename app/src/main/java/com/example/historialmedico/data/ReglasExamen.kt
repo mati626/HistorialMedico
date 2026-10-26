@@ -19,6 +19,6 @@ object ReglasExamen {
 
     fun validarConsulta(fecha: String?, fechaConsulta: String?): String? =
         if (fecha != null && fechaConsulta != null && fecha < fechaConsulta)
-            "El examen no puede ser anterior a la consulta que se pidió"
+            "El examen no puede ser anterior a la consulta en que se pidió"
         else null
 }
