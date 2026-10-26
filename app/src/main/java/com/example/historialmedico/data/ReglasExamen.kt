@@ -1,8 +1,8 @@
 package com.example.historialmedico.data
 
 object ReglasExamen {
-    fun estado(realizado: Boolean, fecha: String?): EstadoExamen=when{
-        realizado-> EstadoExamen.REALIZADO
+    fun estado(realizado: Boolean, fecha: String?): EstadoExamen = when {
+        realizado -> EstadoExamen.REALIZADO
         fecha != null -> EstadoExamen.AGENDADO
         else -> EstadoExamen.SOLICITADO
     }
@@ -14,11 +14,11 @@ object ReglasExamen {
         else -> null
     }
 
-    fun consultasPosibles(horas: List<HoraMedica>,ahora: Long):
-            List<HoraMedica> =horas.filter { it.fechaHora<=ahora }
+    fun consultasPosibles(horas: List<HoraMedica>, ahora: Long):
+            List<HoraMedica> = horas.filter { it.fechaHora <= ahora }
 
-    fun validarConsulta(fecha: String?,fechaConsulta: String?): String?=
-        if(fecha != null && fechaConsulta != null && fecha < fechaConsulta)
-            "El examen no puede ser anterior a la consulta que se pidio"
-    else null
+    fun validarConsulta(fecha: String?, fechaConsulta: String?): String? =
+        if (fecha != null && fechaConsulta != null && fecha < fechaConsulta)
+            "El examen no puede ser anterior a la consulta que se pidió"
+        else null
 }
