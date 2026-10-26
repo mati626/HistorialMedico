@@ -13,4 +13,12 @@ object ReglasExamen {
         !realizado && fecha < hoy -> "Un examen próximo no puede tener fecha pasada"
         else -> null
     }
+
+    fun consultasPosibles(horas: List<HoraMedica>,ahora: Long):
+            List<HoraMedica> =horas.filter { it.fechaHora<=ahora }
+
+    fun validarConsulta(fecha: String?,fechaConsulta: String?): String?=
+        if(fecha != null && fechaConsulta != null && fecha < fechaConsulta)
+            "El examen no puede ser anterior a la consulta que se pidio"
+    else null
 }
