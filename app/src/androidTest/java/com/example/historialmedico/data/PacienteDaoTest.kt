@@ -21,8 +21,8 @@ class PacienteDaoTest {
         val context= InstrumentationRegistry.getInstrumentation().targetContext
         db = Room.inMemoryDatabaseBuilder(context, AppDataBase::class.java).build()
         runBlocking {
-            val perfilId = db.perfilDao().insert(Perfil(nombre = "Titular Prueba"))
-            pacienteId = db.pacienteDao().insert(Paciente(perfilId = perfilId, nombre = "Paciente Prueba", relacion = "Yo"))
+            val perfilId = db.perfilDao().insert(Perfil(nombre = "Juan Perez"))
+            pacienteId = db.pacienteDao().insert(Paciente(perfilId = perfilId, nombre = "Juan Perez", relacion = "Yo"))
         }
     }
 
@@ -35,11 +35,11 @@ class PacienteDaoTest {
     fun borrarPaciente_borraTodoLoSuyo(){
         runBlocking {
             db.medicamentoDao().insertConAlarmas(
-                Medicamento(pacienteId=pacienteId, nombre = "Medicamento Prueba", dosis = "10 mg"),
+                Medicamento(pacienteId=pacienteId, nombre = "Enalapril Maleato", dosis = "10 mg"),
                 listOf(480)
             )
             db.horaMedicaDao().insertConRecordatorio(
-                HoraMedica(pacienteId=pacienteId, especialidad = "Especialidad Prueba", fechaHora = 0L, lugar = "lugar Prueba"), recordatorioMillis = 0L
+                HoraMedica(pacienteId=pacienteId, especialidad = "Nefrologia", fechaHora = 0L, lugar = "Hospital Higueras"), recordatorioMillis = 0L
             )
             assertEquals(2,db.alarmaDao().getActivas().size)
             db.presionArterialDao().insert(

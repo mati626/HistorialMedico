@@ -22,8 +22,8 @@ class MedicamentoDaoTest {
         val context= InstrumentationRegistry.getInstrumentation().targetContext
         db = Room.inMemoryDatabaseBuilder(context, AppDataBase::class.java).build()
         runBlocking {
-            val perfilId = db.perfilDao().insert(Perfil(nombre = "Titular Prueba"))
-            pacienteId = db.pacienteDao().insert(Paciente(perfilId = perfilId, nombre = "Paciente Prueba", relacion = "Yo"))
+            val perfilId = db.perfilDao().insert(Perfil(nombre = "Juan Lopez"))
+            pacienteId = db.pacienteDao().insert(Paciente(perfilId = perfilId, nombre = "Juan Lopez", relacion = "Yo"))
         }
     }
 
@@ -35,7 +35,7 @@ class MedicamentoDaoTest {
     @Test
     fun insertConAlarmas_dosHoras_guardaDosAlarmas(){
         runBlocking {
-            val medicamento= Medicamento(pacienteId=pacienteId, nombre = "Medicamento Prueba", dosis = "10 mg")
+            val medicamento= Medicamento(pacienteId=pacienteId, nombre = "Enalapril Maleato", dosis = "10 mg")
             val alarmas=db.medicamentoDao().insertConAlarmas(medicamento, listOf(480,1200))
 
             assertEquals(2, alarmas.size)
@@ -48,7 +48,7 @@ class MedicamentoDaoTest {
     @Test
     fun insertConAlarmas_sinHoras_guardaSoloMedicamento(){
         runBlocking {
-            val medicamento= Medicamento(pacienteId=pacienteId, nombre = "Medicamento Prueba", dosis = "10 mg")
+            val medicamento= Medicamento(pacienteId=pacienteId, nombre = "Enalapril Maleato", dosis = "10 mg")
             val alarmas=db.medicamentoDao().insertConAlarmas(medicamento, emptyList())
 
             assertEquals(0, alarmas.size)
