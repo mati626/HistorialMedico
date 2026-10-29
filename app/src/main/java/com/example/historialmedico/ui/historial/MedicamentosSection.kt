@@ -57,6 +57,7 @@ import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.ui.components.SelectorHoraDialog
+import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
 import com.example.historialmedico.util.ReglasTexto
 import com.example.historialmedico.util.ReglasTexto.CampoTexto
@@ -123,7 +124,16 @@ fun MedicamentosSection(
             val resultado = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
             val paginas = resultado?.pages
             if (!paginas.isNullOrEmpty()) {
-                documentoUri = paginas[0].imageUri.toString()
+                val escaneado = paginas[0].imageUri.toString()
+                scope.launch {
+                    val guardado = Documentos.guardar(context, escaneado)
+                    if (guardado == null) {
+                        error = "No se pudo guardar la receta escaneada"
+                    } else {
+                        documentoUri?.let { Documentos.borrar(it) }
+                        documentoUri = guardado
+                    }
+                }
             }
         }
     }

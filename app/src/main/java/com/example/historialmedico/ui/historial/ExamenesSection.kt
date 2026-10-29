@@ -55,6 +55,7 @@ import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.ReglasExamen
 import com.example.historialmedico.ui.components.SelectorFechaDialog
+import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
 import com.example.historialmedico.util.ReglasTexto
 import com.example.historialmedico.util.ReglasTexto.CampoTexto
@@ -93,7 +94,16 @@ fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paci
             val escaneo = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
             val paginas = escaneo?.pages
             if (!paginas.isNullOrEmpty()) {
-                documentoUri = paginas[0].imageUri.toString()
+                val escaneado = paginas[0].imageUri.toString()
+                scope.launch {
+                    val guardado = Documentos.guardar(context, escaneado)
+                    if (guardado == null) {
+                        error = "No se pudo guardar el documento escaneado"
+                    } else {
+                        documentoUri?.let { Documentos.borrar(it) }
+                        documentoUri = guardado
+                    }
+                }
             }
         }
     }
