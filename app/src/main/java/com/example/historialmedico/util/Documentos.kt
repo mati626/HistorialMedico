@@ -6,6 +6,9 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanner
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -13,6 +16,15 @@ import java.io.IOException
 import java.util.UUID
 
 object Documentos {
+    fun crearEscaner(): GmsDocumentScanner = GmsDocumentScanning.getClient(
+        GmsDocumentScannerOptions.Builder()
+            .setGalleryImportAllowed(false)
+            .setPageLimit(1)
+            .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+            .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+            .build()
+    )
+
     //copia el escaneo del ML kit al almacenamiento interno (queda en cache y android puede borrarlo)
     suspend fun guardar(context: Context, uriEscaneo: String): String? =
         withContext(Dispatchers.IO) {
