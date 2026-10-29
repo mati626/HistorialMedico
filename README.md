@@ -23,7 +23,7 @@ El codigo esta organizado por paquetes segun responsabilidad:
 - `ui/perfil` - pantalla inicial para crear el perfil del titular
 - `ui/historial` - lista de pacientes, detalle por paciente, y las secciones de Medicamentos (con el control de tomas), Horas Medicas, Examenes y presion arterial
 - `ui/components` - selectores reutilizables de fecha y hora
-- `data` - entidades y DAOs de Room
+- `data` - entidades y DAOs de Room, y reglas de los exámenes
 - `security` - biometría, manejo del PIN cifrado y regla para crear el PIN
 - `alarms` - programacion de recordatorios y receivers de notificaciones
 - `export` - generacion del PDF del historial
@@ -55,6 +55,7 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/pruebas-integracion** - pruebas de integración de la base de datos y del PIN
 - **feature/prueba-e2e-presion** - pruebas de extremo a extremo del registro de presión arterial
 - **feature/validacion-entradas** - validación de los campos de texto (largo máximo, caracteres permitidos y espacios) y sus pruebas
+- **feature/solicitudes-examenes** - estado próximo o realizado de los exámenes y consulta en que se pidió cada uno
 
 ## Como Correr el Proyecto
 
@@ -69,6 +70,7 @@ Este proyecto sigue el modelo GitFlow:
 - **Autenticación:** biometría y PIN de respaldo funcionando.
 - **Perfil y pacientes:** en el primer inicio se crea el perfil del titular, con la opción de registrarse también como paciente. Desde la lista se agregan y eliminan pacientes.
 - **Historial médico:** registro y eliminación de medicamentos, horas médicas y exámenes por paciente. Medicamentos y exámenes permiten escanear y adjuntar documentos con ML Kit Document Scanner. Las fechas y horas se eligen con calendario y reloj.
+- **Solicitudes de exámenes:** al registrar un examen se indica si es próximo o ya fue realizado. Un examen próximo puede quedar sin fecha (solicitado) o con una fecha que no sea pasada (agendado); uno realizado exige una fecha que no sea futura y admite un resultado opcional. Un examen próximo se puede marcar como realizado desde su tarjeta. Opcionalmente se indica la consulta en que se pidió, elegida entre las horas medicas ya ocurridas del paciente; la fecha del examen no puede ser anterior a esa consulta, y la consulta se muestra en la tarjeta y en el PDF. Las reglas estan en `data/ReglasExamen.kt`.
 - **Presión arterial:** registro de mediciones por paciente (sistólica, diastólica, pulso opcional, fecha y hora), con validación de rangos. La aplicación registra y muestra valores, no los interpreta.
 - **Control de tomas:** los medicamentos con recordatorios muestran una casilla por cada hora para marcar la toma del día, junto al resumen "Tomas de hoy: X de N". Las marcas se guardan por día: al cambiar el día, las casillas parten vacias.
 - **Alarmas y recordatorios:** varios recordatorios diarios por medicamento y un recordatorio por hora médica, eligiendo con cuánta anticipación avisar (30 minutos, 1 hora, 2 horas o 1 día). Las notificaciones son de horario aproximado: Android puede retrasarlas algunos minutos para ahorrar batería. Las alarmas se reprograman al reiniciar el dispositivo, al actualizar la aplicación y al volver a abrirla.
@@ -76,14 +78,13 @@ Este proyecto sigue el modelo GitFlow:
 - **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
 - **CI/CD:** GitHub Actions compila el proyecto y ejecuta las pruebas unitarias en cada push.
 - **Pruebas:**
-  - 27 casos unitarios (conversión de fechas, reglas de las alarmas, reglas del PIN y reglas de texto con entradas invalidas: vacias, solo espacios, demasiado largas, con numeros, emojis o simbolos), que el CI ejecuta en cada push
+  - 36 casos unitarios (conversión de fechas, reglas de las alarmas, reglas del PIN, reglas del estado y la fecha de los examenes, y reglas de texto con entradas invalidas: vacías, solo espacios, demasiado largas, con números, emojis o símbolos), que el CI ejecuta en cada push
   - 9 casos de integracion sobre la base de datos (creacion del perfil, medicamentos con alarmas y borrado en cascada de un paciente) y sobre el PIN cifrado.
   - 2 pruebas de extremo a extremo que entran con PIN: exportar el PDF de un paciente y registrar una presion arterial.
   - Las de integración y extremo a extremo se ejecutan desde Android Studio en un emulador; el CI no las ejecuta.
 
 ## En Desarrollo y Pendiente
 
-- **Solicitudes de exámenes:** el estado del examen (solicitado, agendado, realizado) hoy se deduce de los datos ingresados; falta el selector de estado y el vínculo con una hora médica.
 - **Ingreso de medicamentos por reconocimiento de texto** de la receta y la caja.
 - **Acceso simplificado para emergencias.**
 - **Seguridad:** cifrado de la base de datos y límite de intentos de PIN.
