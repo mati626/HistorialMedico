@@ -236,7 +236,10 @@ fun MedicamentosSection(
                         alarmasPorMedicamento[medicamento.id].orEmpty().forEach { alarma ->
                             AlarmScheduler.cancelar(appContext, alarma.id)
                         }
-                        scope.launch { dao.delete(medicamento) }
+                        scope.launch {
+                            dao.delete(medicamento)
+                            medicamento.documentoUri?.let { Documentos.borrar(it) }
+                        }
                         medicamentoAEliminar = null
                     }) {
                         Text("Eliminar")

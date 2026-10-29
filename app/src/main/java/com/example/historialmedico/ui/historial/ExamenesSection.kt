@@ -191,7 +191,10 @@ fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paci
                 text = { Text("Seguro que quiere eliminar este examen?") },
                 confirmButton = {
                     TextButton(onClick = {
-                        scope.launch { dao.delete(examen) }
+                        scope.launch {
+                            dao.delete(examen)
+                            examen.documentoUri?.let { Documentos.borrar(it) }
+                        }
                         examenAEliminar = null
                     }) {
                         Text("Eliminar")
