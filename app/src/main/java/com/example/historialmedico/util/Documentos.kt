@@ -1,7 +1,11 @@
 package com.example.historialmedico.util
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -31,6 +35,27 @@ object Documentos {
 
     suspend fun borrar(uriDocumento: String) {
         withContext(Dispatchers.IO) { archivo(uriDocumento)?.delete() }
+    }
+
+    //abre la imagen con la app del telefono o avisa si ya no esta
+    fun abrir(context: Context, uriDocumento: String) {
+        val archivo = archivo(uriDocumento)
+        if (archivo == null || !archivo.exists()) {
+            Toast.makeText(context, "El documento ya no está disponible", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val contentUri = FileProvider.getUriForFile(
+            context, "${context.packageName}.fileprovider", archivo
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(contentUri, "image/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "No hay una app para ver imágenes", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun archivo(uriDocumento: String): File? =
