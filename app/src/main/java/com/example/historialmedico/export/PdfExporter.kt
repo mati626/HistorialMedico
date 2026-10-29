@@ -11,6 +11,7 @@ import com.example.historialmedico.data.HoraMedica
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PresionArterial
+import com.example.historialmedico.data.ReglasExamen
 import com.example.historialmedico.util.Fechas
 import java.io.File
 import java.io.FileOutputStream
@@ -128,6 +129,7 @@ object PdfExporter {
             canvas.drawText("Sin examenes registrados", margenIzquierdo, y, paintTexto)
             y += 18f
         } else {
+            val consultasPorId = horasMedicas.associateBy { it.id }
             examenes.forEach { examen ->
                 saltoDePaginaSiNecesario()
                 val detalle = listOfNotNull(
@@ -139,6 +141,16 @@ object PdfExporter {
                     margenIzquierdo, y, paintTexto
                 )
                 y += 18f
+                examen.horaMedicaId?.let {
+                    consultasPorId[it]
+                }?.let { consulta ->
+                    saltoDePaginaSiNecesario()
+                    canvas.drawText(
+                        "Solicitado en: ${ReglasExamen.textoConsulta(consulta)}",
+                        margenIzquierdo + 12f, y, paintTexto
+                    )
+                    y += 18f
+                }
                 dibujarImagenSiExiste(examen.documentoUri)
             }
         }
