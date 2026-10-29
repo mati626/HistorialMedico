@@ -83,22 +83,22 @@ class ExportarPdfE2ETest {
             }
             //crea el perfil y elige al paciente
             composeRule.onNodeWithText("Crea tu perfil").assertIsDisplayed()
-            composeRule.onNodeWithText("Tu nombre").performTextInput("Paciente Prueba")
+            composeRule.onNodeWithText("Tu nombre").performTextInput("Juan Perez")
             composeRule.onNodeWithText("Continuar").performSemanticsAction(SemanticsActions.OnClick)
             //"Yo" es la relacion del titular: solo aparece en la lista de pacientes
             composeRule.waitUntil(timeoutMillis = 5_000) {
                 composeRule.onAllNodesWithText("Yo").fetchSemanticsNodes().isNotEmpty()
             }
-            composeRule.onNodeWithText("Paciente Prueba").performClick()
-            composeRule.onNodeWithText("Nombre").performTextInput("Medicamento Prueba")
+            composeRule.onNodeWithText("Juan Perez").performClick()
+            composeRule.onNodeWithText("Nombre").performTextInput("Enalapril Maleato")
             composeRule.onNodeWithText("Dosis").performTextInput("10 mg")
             composeRule.onNodeWithText("Agregar Medicamento").performScrollTo()
                 .performSemanticsAction(SemanticsActions.OnClick)
             composeRule.waitUntil(timeoutMillis = 5_000) {
-                composeRule.onAllNodesWithText("Medicamento Prueba - 10 mg").fetchSemanticsNodes()
+                composeRule.onAllNodesWithText("Enalapril Maleato - 10 mg").fetchSemanticsNodes()
                     .isNotEmpty()
             }
-            composeRule.onNodeWithText("Medicamento Prueba - 10 mg").performScrollTo()
+            composeRule.onNodeWithText("Enalapril Maleato - 10 mg").performScrollTo()
                 .assertIsDisplayed()
             //exportar pdf sin abrir las opciones de sistema
             intending(hasAction(Intent.ACTION_CHOOSER))

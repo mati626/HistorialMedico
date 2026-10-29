@@ -29,7 +29,7 @@ class PerfilDaoTest {
     @Test
     fun crearPerfil_conTitular_creaPacienteYo(){
         runBlocking {
-            db.perfilDao().crearPerfil("Titular Prueba", registrarTitular = true)
+            db.perfilDao().crearPerfil("Juan Perez", registrarTitular = true)
 
             val perfil=checkNotNull(db.perfilDao().getPerfil().first())
             val pacientes=db.pacienteDao().getByPerfil(perfil.id).first()
@@ -42,7 +42,7 @@ class PerfilDaoTest {
     @Test
     fun crearPerfil_sinTitular_noCreaPacientes(){
         runBlocking {
-            db.perfilDao().crearPerfil("Cuidador Prueba", registrarTitular = false)
+            db.perfilDao().crearPerfil("Juan Lopez", registrarTitular = false)
 
             val perfil=checkNotNull(db.perfilDao().getPerfil().first())
             val pacientes=db.pacienteDao().getByPerfil(perfil.id).first()
