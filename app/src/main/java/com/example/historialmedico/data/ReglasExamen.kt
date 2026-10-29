@@ -1,5 +1,7 @@
 package com.example.historialmedico.data
 
+import com.example.historialmedico.util.Fechas
+
 object ReglasExamen {
     fun estado(realizado: Boolean, fecha: String?): EstadoExamen = when {
         realizado -> EstadoExamen.REALIZADO
@@ -21,4 +23,7 @@ object ReglasExamen {
         if (fecha != null && fechaConsulta != null && fecha < fechaConsulta)
             "El examen no puede ser anterior a la consulta en que se pidió"
         else null
+
+    fun textoConsulta(consulta: HoraMedica):
+            String = "${consulta.especialidad}, ${Fechas.fechaHoraVisible(consulta.fechaHora)}"
 }

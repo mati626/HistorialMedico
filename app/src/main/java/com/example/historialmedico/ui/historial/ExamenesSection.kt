@@ -150,7 +150,7 @@ fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paci
                         }
                         examen.horaMedicaId?.let { consultasPorId[it] }?.let { consultaExamen ->
                             Text(
-                                "Solicitado en: ${textoConsulta(consultaExamen)}",
+                                "Solicitado en: ${ReglasExamen.textoConsulta(consultaExamen)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -244,7 +244,7 @@ fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paci
                 onClick = { menuConsultaAbierto = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Solicitado en: ${consulta?.let { textoConsulta(it) } ?: "sin consulta"}")
+                Text("Solicitado en: ${consulta?.let { ReglasExamen.textoConsulta(it) } ?: "sin consulta"}")
             }
             DropdownMenu(
                 expanded = menuConsultaAbierto,
@@ -260,7 +260,7 @@ fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paci
                 ReglasExamen.consultasPosibles(horasMedicas, System.currentTimeMillis())
                     .forEach { opcion ->
                         DropdownMenuItem(
-                            text = { Text(textoConsulta(opcion)) },
+                            text = { Text(ReglasExamen.textoConsulta(opcion)) },
                             onClick = {
                                 consulta = opcion
                                 menuConsultaAbierto = false
@@ -473,5 +473,3 @@ private fun MarcarRealizadoDialog(
     }
 }
 
-private fun textoConsulta(consulta: HoraMedica):
-        String = "${consulta.especialidad}, ${Fechas.fechaHoraVisible(consulta.fechaHora)}"
