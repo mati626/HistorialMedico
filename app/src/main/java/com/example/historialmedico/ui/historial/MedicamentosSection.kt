@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -52,6 +54,7 @@ import com.example.historialmedico.data.ControlTomaDao
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.data.ReglasPastillas
 import com.example.historialmedico.ui.components.SelectorHoraDialog
 import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
@@ -61,7 +64,6 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 
 @Composable
 fun MedicamentosSection(
@@ -91,6 +93,8 @@ fun MedicamentosSection(
     val horas = remember { mutableStateListOf<Int>() }
     var mostrarSelectorHora by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var pastillas by remember { mutableStateOf("") }
+    var pastillasPorToma by remember { mutableStateOf("1") }
     val scope = rememberCoroutineScope()
     fun guardarToma(medicamentoId: Long, hora: Int, tomado: Boolean) {
         scope.launch {
@@ -293,6 +297,31 @@ fun MedicamentosSection(
                 onCancelar = { mostrarSelectorHora = false }
             )
         }
+        //solo los medicamentos con recordatorios llevan conteo pq solo ellos tienen casillas de toma
+        if (horas.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = pastillas,
+                onValueChange = { if (it.length <= 3 && it.all(Char::isDigit)) pastillas = it },
+                label = { Text("Pastillas que tiene (opcional)") },
+                supportingText = {
+                    Text("Avisa cuando alcancen para ${ReglasPastillas.DIAS_AVISO} días o menos")
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = pastillasPorToma,
+                onValueChange = {
+                    if (it.length <= 2 && it.all(Char::isDigit)) pastillasPorToma = it
+                },
+                label = { Text("Pastillas por toma") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             scanner.getStartScanIntent(activity)
@@ -313,8 +342,15 @@ fun MedicamentosSection(
             val dosisAGuardar = ReglasTexto.normalizar(dosis)
             val errorTexto = ReglasTexto.validar(nombre, CampoTexto.MEDICAMENTO)
                 ?: ReglasTexto.validar(dosis, CampoTexto.DOSIS)
+            val errorPastillas = when {
+                horas.isEmpty() -> null
+                pastillas.isBlank() -> ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
+                else -> ReglasPastillas.validarCantidad(pastillas.toIntOrNull())
+                    ?: ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
+            }
             when {
                 errorTexto != null -> error = errorTexto
+                errorPastillas != null -> error = errorPastillas
                 !dosis.any { it.isDigit() } -> error =
                     "La dosis debe incluir un numero (ej: 500 mg)"
 
@@ -330,13 +366,18 @@ fun MedicamentosSection(
                         pacienteId = paciente.id,
                         nombre = nombreAGuardar,
                         dosis = dosisAGuardar,
-                        documentoUri = documentoUri
+                        documentoUri = documentoUri,
+                        cantidad = if (horas.isEmpty()) null else pastillas.toIntOrNull(),
+                        unidadesPorToma = if (horas.isEmpty()) 1 else pastillasPorToma.toIntOrNull()
+                            ?: 1
                     )
 
                     val horasAguardar = horas.toList()
                     nombre = ""
                     dosis = ""
                     horas.clear()
+                    pastillas = ""
+                    pastillasPorToma = "1"
                     documentoUri = null
                     error = null
                     scope.launch {
