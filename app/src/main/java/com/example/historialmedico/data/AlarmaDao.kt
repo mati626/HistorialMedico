@@ -6,27 +6,33 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AlarmaDao {
-    @Query("""
+    @Query(
+        """
         SELECT alarmas.* FROM alarmas
         INNER JOIN medicamentos ON alarmas.medicamentoId = medicamentos.id
         WHERE medicamentos.pacienteId = :pacienteId
         ORDER BY alarmas.hora ASC
-    """)
+    """
+    )
     fun getDeMedicamentos(pacienteId: Long): Flow<List<Alarma>>
 
-    @Query("""
+    @Query(
+        """
         SELECT alarmas.* FROM alarmas
         INNER JOIN horas_medicas ON alarmas.horaMedicaId = horas_medicas.id
         WHERE horas_medicas.pacienteId = :pacienteId
-    """)
+    """
+    )
     fun getDeHorasMedicas(pacienteId: Long): Flow<List<Alarma>>
 
-    @Query("""
+    @Query(
+        """
         SELECT alarmas.id FROM alarmas
         LEFT JOIN medicamentos ON alarmas.medicamentoId = medicamentos.id
         LEFT JOIN horas_medicas ON alarmas.horaMedicaId = horas_medicas.id
         WHERE medicamentos.pacienteId = :pacienteId OR horas_medicas.pacienteId = :pacienteId
-    """)
+    """
+    )
     suspend fun getIdsByPaciente(pacienteId: Long): List<Long>
 
     @Query("SELECT * FROM alarmas WHERE id = :id")
@@ -37,4 +43,7 @@ interface AlarmaDao {
 
     @Query("UPDATE alarmas SET activo = 0 WHERE id = :id")
     suspend fun desactivar(id: Long)
+
+    @Query("SELECT COUNT(*) FROM alarmas WHERE medicamentoId = :medicamentoId")
+    suspend fun contarDeMedicamento(medicamentoId: Long): Int
 }
