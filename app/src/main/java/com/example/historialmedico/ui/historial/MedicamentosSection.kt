@@ -48,7 +48,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.data.AlarmaDao
-import com.example.historialmedico.data.ControlToma
 import com.example.historialmedico.data.ControlTomaDao
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
@@ -95,14 +94,7 @@ fun MedicamentosSection(
     val scope = rememberCoroutineScope()
     fun guardarToma(medicamentoId: Long, hora: Int, tomado: Boolean) {
         scope.launch {
-            controlTomaDao.guardar(
-                ControlToma(
-                    medicamentoId = medicamentoId,
-                    fecha = hoy,
-                    hora = hora,
-                    tomado = tomado
-                )
-            )
+            controlTomaDao.marcarToma(medicamentoId, hoy, hora, tomado)
         }
     }
 
