@@ -178,6 +178,30 @@ fun MedicamentosSection(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            medicamento.cantidad?.let { cantidad ->
+                                val dias = ReglasPastillas.diasRestantes(
+                                    cantidad,
+                                    medicamento.unidadesPorToma,
+                                    horasDelMedicamento.size
+                                )
+                                val pocas = ReglasPastillas.quedanPocas(dias)
+                                Text(
+                                    ReglasPastillas.textoRestantes(cantidad, dias),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (pocas)
+                                        MaterialTheme.colorScheme.error
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (pocas) {
+                                    Text(
+                                        "Reponga pronto",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                             horasDelMedicamento.forEach { hora ->
                                 val tomado = hora in horasTomadas
                                 Row(
