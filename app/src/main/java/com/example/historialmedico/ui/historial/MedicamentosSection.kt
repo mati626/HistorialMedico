@@ -193,6 +193,7 @@ fun MedicamentosSection(
                                     else
                                         MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                //el aviso va en texto y no solo en color, para quien no distingue el rojo
                                 if (pocas) {
                                     Text(
                                         "Reponga pronto",
@@ -321,7 +322,7 @@ fun MedicamentosSection(
                 onCancelar = { mostrarSelectorHora = false }
             )
         }
-        //solo los medicamentos con recordatorios llevan conteo pq solo ellos tienen casillas de toma
+        //solo los medicamentos con recordatorios llevan conteo porque solo ellos tienen casillas de toma
         if (horas.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
