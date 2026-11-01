@@ -59,13 +59,13 @@ class PresionE2ETest {
             }
             //crea el perfil y elige al paciente
             composeRule.onNodeWithText("Crea tu perfil").assertIsDisplayed()
-            composeRule.onNodeWithText("Tu nombre").performTextInput("Paciente Prueba")
+            composeRule.onNodeWithText("Tu nombre").performTextInput("Juan Perez")
             composeRule.onNodeWithText("Continuar").performSemanticsAction(SemanticsActions.OnClick)
             //"Yo" es la relacion del titular: solo aparece en la lista de pacientes
             composeRule.waitUntil(timeoutMillis = 5_000) {
                 composeRule.onAllNodesWithText("Yo").fetchSemanticsNodes().isNotEmpty()
             }
-            composeRule.onNodeWithText("Paciente Prueba").performClick()
+            composeRule.onNodeWithText("Juan Perez").performClick()
             //registrar presion
             composeRule.onNodeWithText("Presion").performScrollTo().performClick()
             composeRule.onNodeWithText("Sistolica").performTextInput("120")

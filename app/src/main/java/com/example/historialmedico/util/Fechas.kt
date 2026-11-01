@@ -46,4 +46,8 @@ object Fechas{
     //fecha de hoy
     fun hoyIso(): String=
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+    //milisegundos -> "2026-10-18" (dia de la zona del celular)
+    fun millisAIso(millis: Long): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(millis))
 }

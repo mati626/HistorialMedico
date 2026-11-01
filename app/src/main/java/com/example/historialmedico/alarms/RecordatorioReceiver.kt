@@ -18,6 +18,8 @@ import com.example.historialmedico.data.AppDataBase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.example.historialmedico.data.Medicamento
+import com.example.historialmedico.data.ReglasPastillas
 
 class RecordatorioReceiver : BroadcastReceiver() {
 
@@ -33,10 +35,10 @@ class RecordatorioReceiver : BroadcastReceiver() {
                 if (alarma == null || !alarma.activo) return@launch
 
                 val texto = textoNotificacion(database, alarma) ?: return@launch
-                val mostrada=mostrarNotificacion(context, alarmaId, texto.first, texto.second)
+                val mostrada = mostrarNotificacion(context, alarmaId, texto.first, texto.second)
                 if (alarma.hora != null) {
                     AlarmScheduler.programar(context, alarma)
-                }else if (mostrada){
+                } else if (mostrada) {
                     database.alarmaDao().desactivar(alarma.id)
                 }
             } finally {
@@ -45,17 +47,31 @@ class RecordatorioReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun textoNotificacion(database: AppDataBase, alarma: Alarma): Pair<String, String>? {
+    private suspend fun textoNotificacion(
+        database: AppDataBase,
+        alarma: Alarma
+    ): Pair<String, String>? {
         val medicamentoId = alarma.medicamentoId
         if (medicamentoId != null) {
             val medicamento = database.medicamentoDao().getById(medicamentoId) ?: return null
             val paciente = database.pacienteDao().getById(medicamento.pacienteId) ?: return null
-            return "Medicamento de ${paciente.nombre}" to "${medicamento.nombre} - ${medicamento.dosis}"
+            val mensaje = "${medicamento.nombre} - ${medicamento.dosis}"
+            val aviso = avisoPastillas(database, medicamento)
+            return "Medicamento de ${paciente.nombre}" to if (aviso == null) mensaje else "$mensaje\n$aviso"
         }
         val horaMedicaId = alarma.horaMedicaId ?: return null
         val horaMedica = database.horaMedicaDao().getById(horaMedicaId) ?: return null
         val paciente = database.pacienteDao().getById(horaMedica.pacienteId) ?: return null
         return "Hora medica de ${paciente.nombre}" to "${horaMedica.especialidad} en ${horaMedica.lugar}"
+    }
+
+    //null si no lleva conteo o si todavia alcanzan para mas de DIAS_AVISO dias
+    private suspend fun avisoPastillas(database: AppDataBase, medicamento: Medicamento): String? {
+        val cantidad = medicamento.cantidad ?: return null
+        val tomasPorDia = database.alarmaDao().contarDeMedicamento(medicamento.id)
+        val dias = ReglasPastillas.diasRestantes(cantidad, medicamento.unidadesPorToma, tomasPorDia)
+        if (!ReglasPastillas.quedanPocas(dias)) return null
+        return "${ReglasPastillas.textoRestantes(cantidad, dias)}. Reponga pronto"
     }
 
     private fun mostrarNotificacion(context: Context, alarmaId: Long, titulo: String, mensaje: String): Boolean {
@@ -75,6 +91,7 @@ class RecordatorioReceiver : BroadcastReceiver() {
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(titulo)
             .setContentText(mensaje)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(mensaje))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(contentPendingIntent)
             .setAutoCancel(true)
