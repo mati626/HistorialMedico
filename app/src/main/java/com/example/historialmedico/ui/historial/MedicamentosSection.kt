@@ -88,6 +88,7 @@ fun MedicamentosSection(
         )
     }.collectAsState(initial = emptyList())
     var medicamentoAEliminar by remember { mutableStateOf<Medicamento?>(null) }
+    var medicamentoAReponer by remember { mutableStateOf<Medicamento?>(null) }
     var nombre by remember { mutableStateOf("") }
     var dosis by remember { mutableStateOf("") }
     val horas = remember { mutableStateListOf<Int>() }
@@ -203,6 +204,11 @@ fun MedicamentosSection(
                                     )
                                 }
                             }
+                            TextButton(onClick = {
+                                medicamentoAReponer = medicamento
+                            }) {
+                                Text(if (medicamento.cantidad == null) "Contar pastillas" else "Reponer")
+                            }
                             horasDelMedicamento.forEach { hora ->
                                 val tomado = hora in horasTomadas
                                 Row(
@@ -265,6 +271,17 @@ fun MedicamentosSection(
                         Text("Cancelar")
                     }
                 }
+            )
+        }
+
+        medicamentoAReponer?.let { medicamento ->
+            ReponerDialog(
+                medicamento = medicamento,
+                onConfirmar = { pastillas ->
+                    scope.launch { dao.reponer(medicamento.id, pastillas) }
+                    medicamentoAReponer = null
+                },
+                onCancelar = { medicamentoAReponer = null }
             )
         }
 
@@ -430,3 +447,56 @@ fun MedicamentosSection(
 }
 
 private const val MAX_MEDICAMENTOS_POR_PACIENTE = 10
+
+@Composable
+private fun ReponerDialog(
+    medicamento: Medicamento,
+    onConfirmar: (pastillas: Int) -> Unit,
+    onCancelar: () -> Unit
+) {
+    var texto by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("Reponer ${medicamento.nombre}") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = texto,
+                    onValueChange = { if (it.length <= 3 && it.all(Char::isDigit)) texto = it },
+                    label = { Text("Pastillas que compró") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                error?.let {
+                    Text(
+                        it, color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val pastillas = texto.toIntOrNull()
+                val errorCantidad = ReglasPastillas.validarCantidad(
+                    pastillas,
+                    actual = medicamento.cantidad ?: 0
+                )
+                when {
+                    errorCantidad != null -> error = errorCantidad
+                    pastillas != null -> onConfirmar(pastillas)
+                }
+            }) {
+                Text("Reponer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) {
+                Text("Cancelar")
+            }
+        }
+    )
+}

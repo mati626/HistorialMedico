@@ -21,16 +21,20 @@ interface MedicamentoDao {
     @Delete
     suspend fun delete(medicamento: Medicamento)
 
+    //COALESCE: si no llevaba conteo(null) empieza a contar desde lo que se repone
+    @Query("UPDATE medicamentos SET cantidad = COALESCE(cantidad, 0) + :pastillas WHERE id = :id")
+    suspend fun reponer(id: Long, pastillas: Int)
+
     @Insert
     suspend fun insertAlarma(alarma: Alarma): Long
 
     @Transaction
-    suspend fun insertConAlarmas(medicamento: Medicamento,horas: List<Int>):
-            List<Alarma>{
-        val medicamentoId=insert(medicamento)
-        return horas.map { hora->
-            val alarma= Alarma(medicamentoId=medicamentoId,hora=hora)
-            alarma.copy(id=insertAlarma(alarma))
+    suspend fun insertConAlarmas(medicamento: Medicamento, horas: List<Int>):
+            List<Alarma> {
+        val medicamentoId = insert(medicamento)
+        return horas.map { hora ->
+            val alarma = Alarma(medicamentoId = medicamentoId, hora = hora)
+            alarma.copy(id = insertAlarma(alarma))
         }
     }
 }
