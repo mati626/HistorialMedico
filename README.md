@@ -92,7 +92,7 @@ Este proyecto sigue el modelo GitFlow:
 - **Ingreso de medicamentos por reconocimiento de texto** de la receta y la caja.
 - **Acceso simplificado para emergencias.**
 - **Seguridad:** cifrado de la base de datos y límite de intentos de PIN.
-- 
+  
 ## Licencia
 
 Este proyecto usa licencia MIT, ver archivo [LICENSE](LICENSE)
