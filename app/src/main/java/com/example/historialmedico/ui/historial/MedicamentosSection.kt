@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -43,16 +44,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.data.AlarmaDao
-import com.example.historialmedico.data.ControlToma
 import com.example.historialmedico.data.ControlTomaDao
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.data.ReglasPastillas
 import com.example.historialmedico.ui.components.SelectorHoraDialog
 import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
@@ -62,7 +64,6 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 
 @Composable
 fun MedicamentosSection(
@@ -87,22 +88,18 @@ fun MedicamentosSection(
         )
     }.collectAsState(initial = emptyList())
     var medicamentoAEliminar by remember { mutableStateOf<Medicamento?>(null) }
+    var medicamentoAReponer by remember { mutableStateOf<Medicamento?>(null) }
     var nombre by remember { mutableStateOf("") }
     var dosis by remember { mutableStateOf("") }
     val horas = remember { mutableStateListOf<Int>() }
     var mostrarSelectorHora by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var pastillas by remember { mutableStateOf("") }
+    var pastillasPorToma by remember { mutableStateOf("1") }
     val scope = rememberCoroutineScope()
     fun guardarToma(medicamentoId: Long, hora: Int, tomado: Boolean) {
         scope.launch {
-            controlTomaDao.guardar(
-                ControlToma(
-                    medicamentoId = medicamentoId,
-                    fecha = hoy,
-                    hora = hora,
-                    tomado = tomado
-                )
-            )
+            controlTomaDao.marcarToma(medicamentoId, hoy, hora, tomado)
         }
     }
 
@@ -182,6 +179,36 @@ fun MedicamentosSection(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            medicamento.cantidad?.let { cantidad ->
+                                val dias = ReglasPastillas.diasRestantes(
+                                    cantidad,
+                                    medicamento.unidadesPorToma,
+                                    horasDelMedicamento.size
+                                )
+                                val pocas = ReglasPastillas.quedanPocas(dias)
+                                Text(
+                                    ReglasPastillas.textoRestantes(cantidad, dias),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (pocas)
+                                        MaterialTheme.colorScheme.error
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                //el aviso va en texto y no solo en color, para quien no distingue el rojo
+                                if (pocas) {
+                                    Text(
+                                        "Reponga pronto",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                            TextButton(onClick = {
+                                medicamentoAReponer = medicamento
+                            }) {
+                                Text(if (medicamento.cantidad == null) "Contar pastillas" else "Reponer")
+                            }
                             horasDelMedicamento.forEach { hora ->
                                 val tomado = hora in horasTomadas
                                 Row(
@@ -247,6 +274,17 @@ fun MedicamentosSection(
             )
         }
 
+        medicamentoAReponer?.let { medicamento ->
+            ReponerDialog(
+                medicamento = medicamento,
+                onConfirmar = { pastillas ->
+                    scope.launch { dao.reponer(medicamento.id, pastillas) }
+                    medicamentoAReponer = null
+                },
+                onCancelar = { medicamentoAReponer = null }
+            )
+        }
+
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
@@ -301,6 +339,31 @@ fun MedicamentosSection(
                 onCancelar = { mostrarSelectorHora = false }
             )
         }
+        //solo los medicamentos con recordatorios llevan conteo porque solo ellos tienen casillas de toma
+        if (horas.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = pastillas,
+                onValueChange = { if (it.length <= 3 && it.all(Char::isDigit)) pastillas = it },
+                label = { Text("Pastillas que tiene (opcional)") },
+                supportingText = {
+                    Text("Avisa cuando alcancen para ${ReglasPastillas.DIAS_AVISO} días o menos")
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = pastillasPorToma,
+                onValueChange = {
+                    if (it.length <= 2 && it.all(Char::isDigit)) pastillasPorToma = it
+                },
+                label = { Text("Pastillas por toma") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             scanner.getStartScanIntent(activity)
@@ -321,8 +384,15 @@ fun MedicamentosSection(
             val dosisAGuardar = ReglasTexto.normalizar(dosis)
             val errorTexto = ReglasTexto.validar(nombre, CampoTexto.MEDICAMENTO)
                 ?: ReglasTexto.validar(dosis, CampoTexto.DOSIS)
+            val errorPastillas = when {
+                horas.isEmpty() -> null
+                pastillas.isBlank() -> ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
+                else -> ReglasPastillas.validarCantidad(pastillas.toIntOrNull())
+                    ?: ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
+            }
             when {
                 errorTexto != null -> error = errorTexto
+                errorPastillas != null -> error = errorPastillas
                 !dosis.any { it.isDigit() } -> error =
                     "La dosis debe incluir un numero (ej: 500 mg)"
 
@@ -338,13 +408,18 @@ fun MedicamentosSection(
                         pacienteId = paciente.id,
                         nombre = nombreAGuardar,
                         dosis = dosisAGuardar,
-                        documentoUri = documentoUri
+                        documentoUri = documentoUri,
+                        cantidad = if (horas.isEmpty()) null else pastillas.toIntOrNull(),
+                        unidadesPorToma = if (horas.isEmpty()) 1 else pastillasPorToma.toIntOrNull()
+                            ?: 1
                     )
 
                     val horasAguardar = horas.toList()
                     nombre = ""
                     dosis = ""
                     horas.clear()
+                    pastillas = ""
+                    pastillasPorToma = "1"
                     documentoUri = null
                     error = null
                     scope.launch {
@@ -372,3 +447,56 @@ fun MedicamentosSection(
 }
 
 private const val MAX_MEDICAMENTOS_POR_PACIENTE = 10
+
+@Composable
+private fun ReponerDialog(
+    medicamento: Medicamento,
+    onConfirmar: (pastillas: Int) -> Unit,
+    onCancelar: () -> Unit
+) {
+    var texto by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("Reponer ${medicamento.nombre}") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = texto,
+                    onValueChange = { if (it.length <= 3 && it.all(Char::isDigit)) texto = it },
+                    label = { Text("Pastillas que compró") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                error?.let {
+                    Text(
+                        it, color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val pastillas = texto.toIntOrNull()
+                val errorCantidad = ReglasPastillas.validarCantidad(
+                    pastillas,
+                    actual = medicamento.cantidad ?: 0
+                )
+                when {
+                    errorCantidad != null -> error = errorCantidad
+                    pastillas != null -> onConfirmar(pastillas)
+                }
+            }) {
+                Text("Reponer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
