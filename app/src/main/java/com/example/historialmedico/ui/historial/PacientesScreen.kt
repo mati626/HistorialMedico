@@ -51,6 +51,7 @@ import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PacienteDao
 import com.example.historialmedico.data.PresionArterialDao
 import com.example.historialmedico.ui.perfil.CrearPerfilScreen
+import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.ReglasTexto.CampoTexto
 import com.example.historialmedico.util.ReglasTexto
 
@@ -269,7 +270,9 @@ private fun ListaPacientesScreen(
                             alarmaDao.getIdsByPaciente(paciente.id).forEach { alarmaId ->
                                 AlarmScheduler.cancelar(context, alarmaId)
                             }
+                            val documentos = pacienteDao.getDocumentos(paciente.id)
                             pacienteDao.delete(paciente)
+                            documentos.forEach { Documentos.borrar(it) }
                         }
                     }) {
                         Text("Eliminar")

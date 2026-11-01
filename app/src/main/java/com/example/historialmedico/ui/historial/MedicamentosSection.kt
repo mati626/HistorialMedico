@@ -1,8 +1,6 @@
 package com.example.historialmedico.ui.historial
 
 import android.app.Activity
-import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,7 +44,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.historialmedico.alarms.AlarmScheduler
@@ -57,16 +54,14 @@ import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.ui.components.SelectorHoraDialog
+import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
 import com.example.historialmedico.util.ReglasTexto
 import com.example.historialmedico.util.ReglasTexto.CampoTexto
-import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
-import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 
 @Composable
@@ -123,20 +118,23 @@ fun MedicamentosSection(
             val resultado = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
             val paginas = resultado?.pages
             if (!paginas.isNullOrEmpty()) {
-                documentoUri = paginas[0].imageUri.toString()
+                val escaneado = paginas[0].imageUri.toString()
+                scope.launch {
+                    val guardado = Documentos.guardar(context, escaneado)
+                    if (guardado == null) {
+                        error = "No se pudo guardar la receta escaneada"
+                    } else {
+                        documentoUri?.let { Documentos.borrar(it) }
+                        documentoUri = guardado
+                    }
+                }
             }
         }
     }
 
 
-    val scannerOptions = GmsDocumentScannerOptions.Builder()
-        .setGalleryImportAllowed(false)
-        .setPageLimit(1)
-        .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
-        .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
-        .build()
+    val scanner = remember { Documentos.crearEscaner() }
 
-    val scanner = GmsDocumentScanning.getClient(scannerOptions)
 
     Column(
         modifier = Modifier
@@ -164,16 +162,7 @@ fun MedicamentosSection(
                 ) {
                     if (medicamento.documentoUri != null) {
                         TextButton(onClick = {
-                            val archivo = File(Uri.parse(medicamento.documentoUri).path!!)
-                            val contentUri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider", archivo
-                            )
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(contentUri, "image/*")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(intent)
+                            Documentos.abrir(context, medicamento.documentoUri)
                         }) {
                             Text("Ver Receta")
                         }
@@ -239,7 +228,10 @@ fun MedicamentosSection(
                         alarmasPorMedicamento[medicamento.id].orEmpty().forEach { alarma ->
                             AlarmScheduler.cancelar(appContext, alarma.id)
                         }
-                        scope.launch { dao.delete(medicamento) }
+                        scope.launch {
+                            dao.delete(medicamento)
+                            medicamento.documentoUri?.let { Documentos.borrar(it) }
+                        }
                         medicamentoAEliminar = null
                     }) {
                         Text("Eliminar")

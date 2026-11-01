@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <cache-path name="mlkit_docscan" path="mlkit_docscan_ui_client/" />
-    <cache-path name="pdfs" path="pdfs/"/>
+    <cache-path
+        name="mlkit_docscan"
+        path="mlkit_docscan_ui_client/" />
+    <cache-path
+        name="pdfs"
+        path="pdfs/" />
+    <files-path
+        name="documentos"
+        path="documentos/" />
 </paths>

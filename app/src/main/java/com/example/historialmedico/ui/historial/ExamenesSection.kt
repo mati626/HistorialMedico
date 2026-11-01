@@ -1,8 +1,6 @@
 package com.example.historialmedico.ui.historial
 
 import android.app.Activity
-import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import com.example.historialmedico.data.EstadoExamen
 import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.ExamenDao
@@ -55,14 +52,12 @@ import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.ReglasExamen
 import com.example.historialmedico.ui.components.SelectorFechaDialog
+import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
 import com.example.historialmedico.util.ReglasTexto
 import com.example.historialmedico.util.ReglasTexto.CampoTexto
-import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
-import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.launch
-import java.io.File
 
 @Composable
 fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paciente) {
@@ -93,19 +88,21 @@ fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paci
             val escaneo = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
             val paginas = escaneo?.pages
             if (!paginas.isNullOrEmpty()) {
-                documentoUri = paginas[0].imageUri.toString()
+                val escaneado = paginas[0].imageUri.toString()
+                scope.launch {
+                    val guardado = Documentos.guardar(context, escaneado)
+                    if (guardado == null) {
+                        error = "No se pudo guardar el documento escaneado"
+                    } else {
+                        documentoUri?.let { Documentos.borrar(it) }
+                        documentoUri = guardado
+                    }
+                }
             }
         }
     }
 
-    val scannerOptions = GmsDocumentScannerOptions.Builder()
-        .setGalleryImportAllowed(false)
-        .setPageLimit(1)
-        .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
-        .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
-        .build()
-
-    val scanner = GmsDocumentScanning.getClient(scannerOptions)
+    val scanner = remember { Documentos.crearEscaner() }
 
 
 
@@ -163,17 +160,7 @@ fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paci
                     }
                     if (examen.documentoUri != null) {
                         TextButton(onClick = {
-                            val archivo = File(Uri.parse(examen.documentoUri).path!!)
-                            val contentUri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                archivo
-                            )
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(contentUri, "image/*")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(intent)
+                            Documentos.abrir(context, examen.documentoUri)
                         }) {
                             Text("Ver")
                         }
@@ -195,7 +182,10 @@ fun ExamenesSection(dao: ExamenDao, horaMedicaDao: HoraMedicaDao, paciente: Paci
                 text = { Text("Seguro que quiere eliminar este examen?") },
                 confirmButton = {
                     TextButton(onClick = {
-                        scope.launch { dao.delete(examen) }
+                        scope.launch {
+                            dao.delete(examen)
+                            examen.documentoUri?.let { Documentos.borrar(it) }
+                        }
                         examenAEliminar = null
                     }) {
                         Text("Eliminar")

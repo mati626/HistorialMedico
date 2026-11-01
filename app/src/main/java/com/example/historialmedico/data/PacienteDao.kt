@@ -14,6 +14,14 @@ interface PacienteDao {
     @Query("SELECT * FROM pacientes WHERE id = :id")
     suspend fun getById(id: Long): Paciente?
 
+    @Query(
+        """SELECT documentoUri FROM medicamentos WHERE pacienteId = :pacienteId AND documentoUri IS NOT NULL
+        UNION ALL
+        SELECT documentoUri FROM examenes WHERE pacienteId = :pacienteId AND documentoUri IS NOT NULL
+    """
+    )
+    suspend fun getDocumentos(pacienteId: Long): List<String>
+
     @Insert
     suspend fun insert(paciente: Paciente): Long
 
