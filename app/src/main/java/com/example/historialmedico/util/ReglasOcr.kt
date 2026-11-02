@@ -1,5 +1,10 @@
 package com.example.historialmedico.util
 
+import com.example.historialmedico.data.ReglasPastillas
+
+//lo que se pudo leer de una caja o receta; null = no se encontro
+data class MedicamentoLeido(val nombre: String?, val dosis: String?, val cantidad: Int?)
+
 object ReglasOcr {
     //valor de cada palabra: con y sin tilde porque el OCR suele perderlas
     private val valores = mapOf(
@@ -68,5 +73,87 @@ object ReglasOcr {
         }
         numeros.add(numero)
         return numeros
+    }
+
+    //numero + unidad: "50 mg", "2,5 mg", "500 miligramos"
+    private val dosisRegex = Regex(
+        "(\\d+(?:[.,]\\d+)?)\\s*(miligramos?|microgramos?|mililitros?|gramos?|mcg|mg|ug|ml|ui|g|%)(?!\\p{L})",
+        RegexOption.IGNORE_CASE
+    )
+
+    //la unidad como se escribe en el formulario
+    private fun unidadCorta(unidad: String): String = when (unidad.lowercase()) {
+        "miligramo", "miligramos" -> "mg"
+        "microgramo", "microgramos", "ug" -> "mcg"
+        "mililitro", "mililitros" -> "ml"
+        "gramo", "gramos" -> "g"
+        "ui" -> "UI"
+        else -> unidad.lowercase()
+    }
+
+    private fun dosisDe(texto: String): String? {
+        val encontrada = dosisRegex.find(texto) ?: return null
+        val (numero, unidad) = encontrada.destructured
+        val corta = unidadCorta(unidad)
+        val dosis = if (corta == "%") "$numero%" else "$numero $corta"
+        return dosis.takeIf { ReglasTexto.validar(it, ReglasTexto.CampoTexto.DOSIS) == null }
+    }
+
+    //"30 comprimidos", "x 30 comp.", "14 cápsulas"
+    private val cantidadRegex = Regex(
+        "(?<![\\d.,])(\\d{1,4})\\s*(?:comprimidos?|comp\\.?|tabletas?|tab\\.?|c[aá]psulas?|caps?\\.?|grageas?|p[ií]ldoras?|pastillas?)(?!\\p{L})",
+        RegexOption.IGNORE_CASE
+    )
+
+    //si hay varias, la mayor: "tomar 1 comprimido" no debe ganarle a "28 comprimidos"
+    private fun cantidadDe(lineas: List<LineaLeida>): Int? =
+        lineas.flatMap { linea ->
+            cantidadRegex.findAll(linea.texto).map { it.groupValues[1].toInt() }.toList()
+        }
+            .filter { it in 1..ReglasPastillas.CANTIDAD_MAXIMA }
+            .maxOrNull()
+
+    private val noPermitidosNombre = Regex("[^\\p{L}\\d '-]")
+    private val inicioSinLetras = Regex("^[^\\p{L}]+")
+
+    //"Rp: 1. LOSARTAN POTASICO" -> "Losartan potasico"; null si no parece un nombre
+    private fun limpiarNombre(texto: String): String? {
+        val limpio = ReglasTexto.normalizar(
+            texto.substringAfterLast(':')
+                .replace(noPermitidosNombre, " ")
+                .replace(inicioSinLetras, "")
+        ).trimEnd('-', '\'', ' ')
+        if (limpio.count { it.isLetter() } < 3) return null
+        if (ReglasTexto.validar(limpio, ReglasTexto.CampoTexto.MEDICAMENTO) != null) return null
+        if (limpio != limpio.uppercase()) return limpio
+        //todo en mayusculas (comun en cajas): queda como oracion, sin tocar palabras como "D3"
+        return limpio.split(" ")
+            .joinToString(" ") { palabra ->
+                if (palabra.all { it.isLetter() }) palabra.lowercase() else palabra
+            }
+            .replaceFirstChar { it.titlecase() }
+    }
+
+    private fun nombreDe(lineas: List<LineaLeida>): String? {
+        //1) en la linea de la dosis, lo que va antes: "Losartán potásico 50 mg"
+        for (linea in lineas) {
+            val dosis = dosisRegex.find(linea.texto) ?: continue
+            limpiarNombre(linea.texto.substring(0, dosis.range.first))?.let { return it }
+        }
+        //2) si no, la linea con letras mas grandes que no sea dosis ni cantidad
+        return lineas
+            .filter { !dosisRegex.containsMatchIn(it.texto) && !cantidadRegex.containsMatchIn(it.texto) }
+            .sortedByDescending { it.alto }
+            .firstNotNullOfOrNull { limpiarNombre(it.texto) }
+    }
+
+    //nombre, dosis y cantidad desde las lineas leidas de una caja o receta
+    fun leerMedicamento(lineas: List<LineaLeida>): MedicamentoLeido {
+        val convertidas = lineas.map { it.copy(texto = palabrasANumeros(it.texto)) }
+        return MedicamentoLeido(
+            nombre = nombreDe(convertidas),
+            dosis = convertidas.firstNotNullOfOrNull { dosisDe(it.texto) },
+            cantidad = cantidadDe(convertidas)
+        )
     }
 }
