@@ -60,4 +60,133 @@ class ReglasOcrTest {
         //cada linea leida es un dato distinto: no debe quedar 72
         assertEquals("70\n2", ReglasOcr.palabrasANumeros("setenta\ndos"))
     }
+
+    @Test
+    fun leerMedicamento_cajaCompleta() {
+        //el nombre sale de la linea de la dosis, aunque la marca este mas grande
+        val lineas = listOf(
+            LineaLeida("LOSARTAN", 80),
+            LineaLeida("Losartán potásico 50 mg", 30),
+            LineaLeida("30 comprimidos recubiertos", 25)
+        )
+        assertEquals(
+            MedicamentoLeido("Losartán potásico", "50 mg", 30),
+            ReglasOcr.leerMedicamento(lineas)
+        )
+    }
+
+    @Test
+    fun leerMedicamento_dosisYCantidadEnPalabras() {
+        val lineas = listOf(
+            LineaLeida("Paracetamol quinientos miligramos", 40),
+            LineaLeida("treinta comprimidos", 20)
+        )
+        assertEquals(
+            MedicamentoLeido("Paracetamol", "500 mg", 30),
+            ReglasOcr.leerMedicamento(lineas)
+        )
+    }
+
+    @Test
+    fun leerMedicamento_nombreEnMayusculas() {
+        //queda como oracion, pero "D3" no se toca
+        assertEquals(
+            MedicamentoLeido("Metformina", "850 mg", null),
+            ReglasOcr.leerMedicamento(listOf(LineaLeida("METFORMINA 850 MG", 40)))
+        )
+        assertEquals(
+            MedicamentoLeido("Vitamina D3", "1000 UI", null),
+            ReglasOcr.leerMedicamento(listOf(LineaLeida("VITAMINA D3 1000 UI", 40)))
+        )
+    }
+
+    @Test
+    fun leerMedicamento_recetaConPrefijo() {
+        //el nombre del medico es mas grande, pero el medicamento va pegado a su dosis
+        val leido = ReglasOcr.leerMedicamento(
+            listOf(
+                LineaLeida("Dr. Juan Perez", 60),
+                LineaLeida("Rp: Enalapril 10 mg", 30),
+                LineaLeida("Tomar 1 comprimido cada 12 horas", 25)
+            )
+        )
+        assertEquals("Enalapril", leido.nombre)
+        assertEquals("10 mg", leido.dosis)
+    }
+
+    @Test
+    fun leerMedicamento_dosisSola_nombreDeLaLineaMasGrande() {
+        val lineas = listOf(
+            LineaLeida("50 mg", 30),
+            LineaLeida("COZAAR", 90),
+            LineaLeida("Venta bajo receta", 20)
+        )
+        assertEquals(
+            MedicamentoLeido("Cozaar", "50 mg", null),
+            ReglasOcr.leerMedicamento(lineas)
+        )
+    }
+
+    @Test
+    fun leerMedicamento_dosisConDecimal() {
+        assertEquals(
+            MedicamentoLeido("Bisoprolol", "2,5 mg", null),
+            ReglasOcr.leerMedicamento(listOf(LineaLeida("Bisoprolol 2,5 mg", 30)))
+        )
+    }
+
+    @Test
+    fun leerMedicamento_variasCantidades_ganaLaMayor() {
+        val lineas = listOf(
+            LineaLeida("Tomar 1 comprimido al día", 20),
+            LineaLeida("Caja con 28 comprimidos", 20)
+        )
+        assertEquals(28, ReglasOcr.leerMedicamento(lineas).cantidad)
+    }
+
+    @Test
+    fun leerMedicamento_cantidadSobreElMaximo_null() {
+        //1000 pasa el maximo de 999 del formulario
+        val lineas = listOf(
+            LineaLeida("Aspirina", 20),
+            LineaLeida("1000 comprimidos", 20)
+        )
+        assertEquals(
+            MedicamentoLeido("Aspirina", null, null),
+            ReglasOcr.leerMedicamento(lineas)
+        )
+    }
+
+    @Test
+    fun leerMedicamento_gotasNoEsDosis() {
+        //la "g" de "gotas" no es gramos
+        val lineas = listOf(
+            LineaLeida("Ibuprofeno", 40),
+            LineaLeida("Tomar 10 gotas", 20)
+        )
+        assertEquals(
+            MedicamentoLeido("Ibuprofeno", null, null),
+            ReglasOcr.leerMedicamento(lineas)
+        )
+    }
+
+    @Test
+    fun leerMedicamento_nombreSobreElMaximo_null() {
+        //60 letras: el formulario admite maximo 50
+        val lineas = listOf(LineaLeida("A".repeat(60) + " 50 mg", 30))
+        assertEquals(
+            MedicamentoLeido(null, "50 mg", null),
+            ReglasOcr.leerMedicamento(lineas)
+        )
+    }
+
+    @Test
+    fun leerMedicamento_sinTextoUtil_todoNull() {
+        val nada = MedicamentoLeido(null, null, null)
+        assertEquals(nada, ReglasOcr.leerMedicamento(emptyList()))
+        assertEquals(
+            nada,
+            ReglasOcr.leerMedicamento(listOf(LineaLeida("###", 10), LineaLeida("12", 10)))
+        )
+    }
 }
