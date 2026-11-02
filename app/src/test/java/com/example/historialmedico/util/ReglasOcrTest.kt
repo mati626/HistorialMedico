@@ -189,4 +189,91 @@ class ReglasOcrTest {
             ReglasOcr.leerMedicamento(listOf(LineaLeida("###", 10), LineaLeida("12", 10)))
         )
     }
+
+    //en la presion no importa el alto de las letras, solo el orden de las lineas
+    private fun lineas(vararg textos: String): List<LineaLeida> = textos.map { LineaLeida(it, 50) }
+
+    @Test
+    fun leerPresion_papelConBarra() {
+        assertEquals(
+            PresionLeida(135, 85, 70),
+            ReglasOcr.leerPresion(lineas("Presión 135/85", "Pulso 70"))
+        )
+    }
+
+    @Test
+    fun leerPresion_enPalabras() {
+        //"sobre" se lee como la barra de 120/80
+        assertEquals(
+            PresionLeida(120, 80, 72),
+            ReglasOcr.leerPresion(lineas("ciento veinte sobre ochenta", "pulso setenta y dos"))
+        )
+    }
+
+    @Test
+    fun leerPresion_pantallaConEtiquetas() {
+        //las etiquetas no tienen cifras: quedan los numeros en orden
+        assertEquals(
+            PresionLeida(128, 82, 70),
+            ReglasOcr.leerPresion(lineas("SYS", "128", "mmHg", "DIA", "82", "PUL/min", "70"))
+        )
+    }
+
+    @Test
+    fun leerPresion_cifrasConfundidasEnSieteSegmentos() {
+        //"I28" -> 128, "B2" -> 82, "7O" -> 70; "SYS" no se toca porque no tiene cifras
+        assertEquals(
+            PresionLeida(128, 82, 70),
+            ReglasOcr.leerPresion(lineas("SYS", "I28", "DIA", "B2", "PUL", "7O"))
+        )
+    }
+
+    @Test
+    fun leerPresion_ignoraHoraYFecha() {
+        //sin esta regla el 35 de la hora podria tomarse como diastolica
+        assertEquals(
+            PresionLeida(128, 82, 70),
+            ReglasOcr.leerPresion(lineas("10:35", "11-01", "128", "82", "70"))
+        )
+    }
+
+    @Test
+    fun leerPresion_pulsoAntesDeLaPresion() {
+        assertEquals(
+            PresionLeida(135, 85, 70),
+            ReglasOcr.leerPresion(lineas("Pulso 70, presión 135/85"))
+        )
+    }
+
+    @Test
+    fun leerPresion_sinPulso() {
+        assertEquals(PresionLeida(130, 90, null), ReglasOcr.leerPresion(lineas("130/90")))
+    }
+
+    @Test
+    fun leerPresion_invertida_null() {
+        //la sistolica debe ser mayor: no se dan vuelta los valores
+        assertEquals(PresionLeida(null, null, null), ReglasOcr.leerPresion(lineas("80/120")))
+    }
+
+    @Test
+    fun leerPresion_fueraDeRango_null() {
+        //400 pasa el maximo de la sistolica y 20 no llega al minimo de la diastolica
+        assertEquals(
+            PresionLeida(null, null, null),
+            ReglasOcr.leerPresion(lineas("400", "250", "20"))
+        )
+    }
+
+    @Test
+    fun leerPresion_unSoloNumero_null() {
+        assertEquals(PresionLeida(null, null, null), ReglasOcr.leerPresion(lineas("128")))
+    }
+
+    @Test
+    fun leerPresion_sinTextoUtil_todoNull() {
+        val nada = PresionLeida(null, null, null)
+        assertEquals(nada, ReglasOcr.leerPresion(emptyList()))
+        assertEquals(nada, ReglasOcr.leerPresion(lineas("mmHg", "SYS", "###")))
+    }
 }
