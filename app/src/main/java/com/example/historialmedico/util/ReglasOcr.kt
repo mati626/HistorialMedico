@@ -1,9 +1,13 @@
 package com.example.historialmedico.util
 
 import com.example.historialmedico.data.ReglasPastillas
+import com.example.historialmedico.data.ReglasPresion
 
 //lo que se pudo leer de una caja o receta; null = no se encontro
 data class MedicamentoLeido(val nombre: String?, val dosis: String?, val cantidad: Int?)
+
+//lo que no se pudo leer del tensiometro o un papel; null = no se encontro
+data class PresionLeida(val sistolica: Int?, val diastolica: Int?, val pulso: Int?)
 
 object ReglasOcr {
     //valor de cada palabra: con y sin tilde porque el OCR suele perderlas
@@ -155,5 +159,81 @@ object ReglasOcr {
             dosis = convertidas.firstNotNullOfOrNull { dosisDe(it.texto) },
             cantidad = cantidadDe(convertidas)
         )
+    }
+
+    private val sobre = Regex("(?<!\\p{L})sobre(?!\\p{L})", RegexOption.IGNORE_CASE)
+
+    //"120/80" o "120 / 80"
+    private val sistolicaSobreDiastolica = Regex("(?<!\\d)(\\d{2,3})\\s*/\\s*(\\d{2,3})(?!\\d)")
+
+    //horas "10:35" y fechas "11-01" o "01/11/2026": no son mediciones
+    private val horasYFechas = Regex("(?<!\\d)\\d{1,2}[:/.-]\\d{1,2}(?:[/.-]\\d{2,4})?(?!\\d)")
+
+    private val numeroPresion = Regex("(?<!\\d)\\d{2,3}(?!\\d)")
+
+    //en pantallas de 7 segmentos el OCR confunde cifras con letras: "I2O" -> "120"
+    private val cifrasConLetras =
+        Regex("(?<![\\p{L}\\d])[\\dOoIlSB]*\\d[\\dOoIlSB]*(?![\\p{L}\\d])")
+
+    private fun corregirCifras(texto: String): String =
+        cifrasConLetras.replace(texto) { encontrado ->
+            encontrado.value.map {
+                when (it) {
+                    'O', 'o' -> '0'
+                    'I', 'l' -> '1'
+                    'S' -> '5'
+                    'B' -> '8'
+                    else -> it
+                }
+            }.joinToString("")
+        }
+
+    //sistolica, diastolica y pulso desde las lineas leidas de un tensiometro o papel
+    fun leerPresion(lineas: List<LineaLeida>): PresionLeida {
+        val texto = lineas.joinToString("\n") {
+            corregirCifras(palabrasANumeros(it.texto))
+        }.replace(sobre, "/")
+        //1. escrita como 120/80: el primer par que el formulario aceptaria
+        val pareja = sistolicaSobreDiastolica.findAll(texto).firstOrNull {
+            ReglasPresion.validar(
+                it.groupValues[1].toInt(),
+                it.groupValues[2].toInt(),
+                null
+            ) == null
+        }
+        val resto = if (pareja == null) texto else texto.replaceRange(pareja.range, " ")
+        val numeros = numeroPresion.findAll(resto.replace(horasYFechas, ""))
+            .map { it.value.toInt() }
+            .toList()
+        if (pareja != null) {
+            val sistolica = pareja.groupValues[1].toInt()
+            val diastolica = pareja.groupValues[2].toInt()
+            return PresionLeida(
+                sistolica,
+                diastolica,
+                numeros.firstOrNull {
+                    ReglasPresion.validar(sistolica, diastolica, it) == null
+                }
+            )
+        }
+        //2. numeros sueltos como en la pantalla del tensiometro
+        return leerEnOrden(numeros)
+    }
+
+    //en el tensiometro van de arriba hacia abajo: sistolica, diastolica y pulso
+    private fun leerEnOrden(numeros: List<Int>): PresionLeida {
+        for (i in numeros.indices) {
+            for (j in i + 1 until numeros.size) {
+                val sistolica = numeros[i]
+                val diastolica = numeros[j]
+                if (ReglasPresion.validar(sistolica, diastolica, null) == null) {
+                    val pulso = numeros.drop(j + 1).firstOrNull {
+                        ReglasPresion.validar(sistolica, diastolica, it) == null
+                    }
+                    return PresionLeida(sistolica, diastolica, pulso)
+                }
+            }
+        }
+        return PresionLeida(null, null, null)
     }
 }
