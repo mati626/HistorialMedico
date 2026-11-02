@@ -155,6 +155,24 @@ fun MedicamentosSection(
         }
     }
 
+    //la caja solo se lee para prellenar: no se adjunta y su foto se borra del cache
+    val cajaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { activityResult ->
+        if (activityResult.resultCode == Activity.RESULT_OK) {
+            val pagina = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
+                ?.pages?.firstOrNull()
+            if (pagina != null) {
+                scope.launch {
+                    try {
+                        prellenarDesde(pagina.imageUri, conCantidad = true)
+                    } finally {
+                        withContext(NonCancellable) { Documentos.borrar(pagina.imageUri.toString()) }
+                    }
+                }
+            }
+        }
+    }
 
     val scanner = remember { Documentos.crearEscaner() }
 
@@ -397,6 +415,14 @@ fun MedicamentosSection(
             }
         }) {
             Text(if (documentoUri == null) "Escanear Receta" else "Receta escaneada (volver a escanear)")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = {
+            Documentos.abrirEscaner(context, scanner, cajaLauncher) {
+                error = "No se logro abrir el escaner"
+            }
+        }) {
+            Text("Escanear Caja")
         }
         aviso?.let {
             Text(
