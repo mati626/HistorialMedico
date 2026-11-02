@@ -29,6 +29,7 @@ androidx-compose-material-icons-core = { group= "androidx.compose.material", nam
 androidx-biometric={group="androidx.biometric",name="biometric",version="1.1.0"}
 androidx-security-crypto = { group= "androidx.security",name="security-crypto", version = "1.1.0-alpha06"}
 mlkit-document-scanner={ group= "com.google.android.gms", name="play-services-mlkit-document-scanner",version="16.0.0"}
+mlkit-text-recognition = {group="com.google.mlkit", name="text-recognition",version="16.0.1"}
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
