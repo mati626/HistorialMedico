@@ -2,7 +2,6 @@ package com.example.historialmedico.ui.historial
 
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
@@ -105,7 +104,6 @@ fun MedicamentosSection(
 
     val context = LocalContext.current
     val appContext = context.applicationContext
-    val activity = context as Activity
     var documentoUri by remember { mutableStateOf<String?>(null) }
 
     val scannerLauncher = rememberLauncherForActivityResult(
@@ -366,14 +364,9 @@ fun MedicamentosSection(
         }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
-            scanner.getStartScanIntent(activity)
-                .addOnSuccessListener { intentSender ->
-                    scannerLauncher
-                        .launch(IntentSenderRequest.Builder(intentSender).build())
-                }
-                .addOnFailureListener {
-                    error = "No se logro abrir el escaner"
-                }
+            Documentos.abrirEscaner(context, scanner, scannerLauncher) {
+                error = "No se logro abrir el escaner"
+            }
         }) {
             Text(if (documentoUri == null) "Escanear Receta" else "Receta escaneada (volver a escanear)")
         }
