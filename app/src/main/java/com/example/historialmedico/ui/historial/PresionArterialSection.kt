@@ -1,5 +1,9 @@
 package com.example.historialmedico.ui.historial
 
+import android.app.Activity
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -41,8 +46,14 @@ import com.example.historialmedico.data.PresionArterial
 import com.example.historialmedico.data.PresionArterialDao
 import com.example.historialmedico.data.ReglasPresion
 import com.example.historialmedico.ui.components.SelectorFechaHoraDialog
+import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
+import com.example.historialmedico.util.LectorTexto
+import com.example.historialmedico.util.ReglasOcr
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PresionArterialSection(dao: PresionArterialDao, paciente: Paciente) {
@@ -56,6 +67,52 @@ fun PresionArterialSection(dao: PresionArterialDao, paciente: Paciente) {
     var error by remember { mutableStateOf<String?>(null) }
     var medicionAEliminar by remember { mutableStateOf<PresionArterial?>(null) }
     val scope = rememberCoroutineScope()
+    var aviso by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val scanner = remember { Documentos.crearEscaner() }
+
+    //reemplaza los 3 campos porque son una misma medicion; el usuario confirma al guardar
+    suspend fun prellenarDesde(uri: Uri) {
+        error = null
+        aviso = "Leyendo el texto..."
+        val leida = LectorTexto.leer(context, uri)?.let {
+            ReglasOcr.leerPresion(it)
+        }
+        if (leida == null) {
+            aviso = "No se pudo leer la imagen; ingrese los valores a mano"
+            return
+        }
+        val sistolicaLeida = leida.sistolica
+        val diastolicaLeida = leida.diastolica
+        if (sistolicaLeida == null || diastolicaLeida == null) {
+            aviso = "No se encontró la presión; ingrésela a mano"
+            return
+        }
+        sistolica = sistolicaLeida.toString()
+        diastolica = diastolicaLeida.toString()
+        pulso = leida.pulso?.toString().orEmpty()
+        aviso = "Revise los valores leídos antes de guardar"
+    }
+
+    //la foto solo se lee: no se guarda y se borra del cache
+    val presionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { activityResult ->
+        if (activityResult.resultCode == Activity.RESULT_OK) {
+            val pagina = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
+                ?.pages?.firstOrNull()
+            if (pagina != null) {
+                scope.launch {
+                    try {
+                        prellenarDesde(pagina.imageUri)
+                    } finally {
+                        withContext(NonCancellable) { Documentos.borrar(pagina.imageUri.toString()) }
+                    }
+                }
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -169,6 +226,21 @@ fun PresionArterialSection(dao: PresionArterialDao, paciente: Paciente) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
+            Documentos.abrirEscaner(context, scanner, presionLauncher) {
+                error = "No se logro abrir el escaner"
+            }
+        }) {
+            Text("Escanear Presión")
+        }
+        aviso?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = {
             val sistolicaNum = sistolica.toIntOrNull()
             val diastolicaNum = diastolica.toIntOrNull()
             val pulsoNum = pulso.toIntOrNull()
@@ -193,6 +265,7 @@ fun PresionArterialSection(dao: PresionArterialDao, paciente: Paciente) {
                     pulso = ""
                     fechaHora = null
                     error = null
+                    aviso = null
                     scope.launch { dao.insert(medicion) }
                 }
             }
