@@ -1,8 +1,8 @@
 package com.example.historialmedico.ui.historial
 
 import android.app.Activity
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
@@ -58,6 +58,8 @@ import com.example.historialmedico.data.ReglasPastillas
 import com.example.historialmedico.ui.components.SelectorHoraDialog
 import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
+import com.example.historialmedico.util.LectorTexto
+import com.example.historialmedico.util.ReglasOcr
 import com.example.historialmedico.util.ReglasTexto
 import com.example.historialmedico.util.ReglasTexto.CampoTexto
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -105,8 +107,31 @@ fun MedicamentosSection(
 
     val context = LocalContext.current
     val appContext = context.applicationContext
-    val activity = context as Activity
     var documentoUri by remember { mutableStateOf<String?>(null) }
+    var aviso by remember { mutableStateOf<String?>(null) }
+
+    //prellena con lo leido, solo en los campos vacios: no pisa lo que el usuario escribio
+    suspend fun prellenarDesde(uri: Uri, conCantidad: Boolean) {
+        aviso = "Leyendo el texto..."
+        val leido = LectorTexto.leer(context, uri)?.let { ReglasOcr.leerMedicamento(it) }
+        if (leido == null) {
+            aviso = "No se pudo leer la imagen; complete los datos a mano"
+            return
+        }
+        val cantidad = if (conCantidad) leido.cantidad else null
+        if (nombre.isBlank()) leido.nombre?.let { nombre = it }
+        if (dosis.isBlank()) leido.dosis?.let { dosis = it }
+        if (pastillas.isBlank()) cantidad?.let { pastillas = it.toString() }
+        aviso = when {
+            leido.nombre == null && leido.dosis == null && cantidad == null ->
+                "No se encontraron datos; complételos a mano"
+
+            cantidad != null && horas.isEmpty() ->
+                "Revise los datos; las pastillas aparecen al agregar un recordatorio"
+
+            else -> "Revise los datos leídos antes de guardar"
+        }
+    }
 
     val scannerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -123,12 +148,31 @@ fun MedicamentosSection(
                     } else {
                         documentoUri?.let { Documentos.borrar(it) }
                         documentoUri = guardado
+                        prellenarDesde(Uri.parse(guardado), conCantidad = false)
                     }
                 }
             }
         }
     }
 
+    //la caja solo se lee para prellenar: no se adjunta y su foto se borra del cache
+    val cajaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { activityResult ->
+        if (activityResult.resultCode == Activity.RESULT_OK) {
+            val pagina = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
+                ?.pages?.firstOrNull()
+            if (pagina != null) {
+                scope.launch {
+                    try {
+                        prellenarDesde(pagina.imageUri, conCantidad = true)
+                    } finally {
+                        withContext(NonCancellable) { Documentos.borrar(pagina.imageUri.toString()) }
+                    }
+                }
+            }
+        }
+    }
 
     val scanner = remember { Documentos.crearEscaner() }
 
@@ -366,16 +410,26 @@ fun MedicamentosSection(
         }
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
-            scanner.getStartScanIntent(activity)
-                .addOnSuccessListener { intentSender ->
-                    scannerLauncher
-                        .launch(IntentSenderRequest.Builder(intentSender).build())
-                }
-                .addOnFailureListener {
-                    error = "No se logro abrir el escaner"
-                }
+            Documentos.abrirEscaner(context, scanner, scannerLauncher) {
+                error = "No se logro abrir el escaner"
+            }
         }) {
             Text(if (documentoUri == null) "Escanear Receta" else "Receta escaneada (volver a escanear)")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = {
+            Documentos.abrirEscaner(context, scanner, cajaLauncher) {
+                error = "No se logro abrir el escaner"
+            }
+        }) {
+            Text("Escanear Caja")
+        }
+        aviso?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -422,6 +476,7 @@ fun MedicamentosSection(
                     pastillasPorToma = "1"
                     documentoUri = null
                     error = null
+                    aviso = null
                     scope.launch {
                         withContext(NonCancellable) {
                             val alarmasCreadas = dao.insertConAlarmas(medicamento, horasAguardar)
