@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import com.example.historialmedico.data.Alarma
 import com.example.historialmedico.data.AppDataBase
 import java.util.Calendar
@@ -14,15 +15,17 @@ object AlarmScheduler {
     // una alarma que ya sono con una que sigue pendiente
     private const val FLAGS_ALARMA = PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
 
-    fun programar(context: Context, alarma: Alarma) {
-        if (!alarma.activo) return
+    fun programar(context: Context, alarma: Alarma){
+        if(!alarma.activo) return
         val momento = proximoDisparo(alarma) ?: return
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            momento,
-            pendingIntent(context, alarma.id)
-        )
+        val operacion = pendingIntent(context, alarma.id)
+        //desde android 12 las alarmas exactas solo se permiten si la app esta exenta del ahorro de bateria
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()){
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, momento, operacion)
+        }else{
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, momento, operacion)
+        }
     }
 
     fun cancelar(context: Context, alarmaId: Long) {
