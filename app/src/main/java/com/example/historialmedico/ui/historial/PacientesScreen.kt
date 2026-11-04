@@ -50,6 +50,7 @@ import com.example.historialmedico.data.ControlTomaDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PacienteDao
 import com.example.historialmedico.data.PresionArterialDao
+import com.example.historialmedico.ui.components.AvisoRecordatorios
 import com.example.historialmedico.ui.perfil.CrearPerfilScreen
 import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.ReglasTexto.CampoTexto
@@ -123,6 +124,7 @@ private fun ListaPacientesScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current.applicationContext
     var pacienteAEliminar by remember { mutableStateOf<Paciente?>(null) }
+    val hayRecordatorios by remember { alarmaDao.hayActivas() }.collectAsState(initial = false)
 
 
     Column(
@@ -133,6 +135,9 @@ private fun ListaPacientesScreen(
     ) {
         Text("Pacientes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
+        if(hayRecordatorios){
+            AvisoRecordatorios(modifier= Modifier.padding(bottom = 8.dp))
+        }
 
         LazyColumn(modifier = Modifier.weight(1f)) {
             if (pacientes.isEmpty()) {

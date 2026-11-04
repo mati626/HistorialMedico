@@ -49,7 +49,7 @@ class MainActivity : FragmentActivity() {
         pinManager = PinManager(this)
         database = AppDataBase.getInstance(this)
         lifecycleScope.launch(Dispatchers.IO) {
-            AlarmScheduler.reprogramarTodas(applicationContext)
+            AlarmScheduler.reprogramarFaltantes(applicationContext)
         }
 
         if(Build.VERSION.SDK_INT>= Build.VERSION_CODES.TIRAMISU &&

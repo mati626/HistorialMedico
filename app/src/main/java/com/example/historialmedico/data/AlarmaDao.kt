@@ -41,6 +41,9 @@ interface AlarmaDao {
     @Query("SELECT * FROM alarmas WHERE activo = 1")
     suspend fun getActivas(): List<Alarma>
 
+    @Query("SELECT EXISTS (SELECT 1 FROM alarmas WHERE activo = 1)")
+    fun hayActivas(): Flow<Boolean>
+
     @Query("UPDATE alarmas SET activo = 0 WHERE id = :id")
     suspend fun desactivar(id: Long)
 
