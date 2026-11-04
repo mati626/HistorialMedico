@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -20,7 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.alarms.PermisosRecordatorios
+import kotlinx.coroutines.launch
 
 //solo aparece si falta algo para que los recordatorios lleguen a tiempo
 @Composable
@@ -32,10 +35,13 @@ fun AvisoRecordatorios(modifier: Modifier = Modifier) {
     var bateria by remember {
         mutableStateOf(PermisosRecordatorios.bateriaSinRestriccion(context))
     }
+    val scope = rememberCoroutineScope()
     //al volver de los ajustes se revisa de nuevo
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        val recienConcedida = !bateria && PermisosRecordatorios.bateriaSinRestriccion(context)
         notificaciones = PermisosRecordatorios.notificacionesActivas(context)
         bateria = PermisosRecordatorios.bateriaSinRestriccion(context)
+        if (recienConcedida) scope.launch { AlarmScheduler.volverExactas(context.applicationContext) }
     }
     if (notificaciones && bateria) return
 
