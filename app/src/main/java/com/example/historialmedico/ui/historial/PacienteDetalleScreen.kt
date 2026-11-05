@@ -33,6 +33,7 @@ import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PresionArterialDao
 import com.example.historialmedico.export.PdfExporter
+import com.example.historialmedico.security.SalidaInterna
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -99,6 +100,7 @@ fun PacienteDetalleScreen(
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
                     context.startActivity(Intent.createChooser(intent, "Exportar Historial"))
+                    SalidaInterna.marcar()
                 }
             },
             modifier= Modifier.fillMaxWidth()

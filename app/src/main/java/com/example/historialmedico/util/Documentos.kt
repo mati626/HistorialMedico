@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.core.content.FileProvider
+import com.example.historialmedico.security.SalidaInterna
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanner
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
@@ -43,6 +44,7 @@ object Documentos {
         }
         escaner.getStartScanIntent(activity)
             .addOnSuccessListener {
+                SalidaInterna.marcar()
                 launcher.launch(IntentSenderRequest.Builder(it).build())
             }
             .addOnFailureListener { onError() }
@@ -88,6 +90,7 @@ object Documentos {
         }
         try {
             context.startActivity(intent)
+            SalidaInterna.marcar()
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(context, "No hay una app para ver imágenes", Toast.LENGTH_SHORT).show()
         }
