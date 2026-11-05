@@ -73,6 +73,9 @@ class ExportarPdfE2ETest {
             //accion al boton y no un touch: el teclado mueve la pantalla
             composeRule.onNodeWithText("Guardar PIN")
                 .performSemanticsAction(SemanticsActions.OnClick)
+            composeRule.waitUntil(timeoutMillis = 5_000) {
+                composeRule.onAllNodesWithText("Usar PIN en su lugar").fetchSemanticsNodes().isNotEmpty()
+            }
             //entrar con el pin
             composeRule.onNodeWithText("Usar PIN en su lugar").performClick()
             composeRule.onNodeWithText("PIN").performTextInput("1234")

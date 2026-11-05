@@ -32,54 +32,77 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.historialmedico.security.ReglasIntentos
+import com.example.historialmedico.security.ReglasPin
 
 @Composable
 fun PinEntryScreen(
-    modifier: Modifier= Modifier,
+    modifier: Modifier = Modifier,
     errorMessage: String?,
-    onPinEntered: (String)->Unit,
-    onBack:()-> Unit
-){
+    esperaMs: Long,
+    verificando: Boolean,
+    onPinEntered: (String) -> Unit,
+    onBack: () -> Unit
+) {
     var pin by remember { mutableStateOf("") }
 
     Column(
-        modifier=modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = Icons.Filled.Lock,
             contentDescription = null,
-            modifier=Modifier.size(64.dp),
-            tint=MaterialTheme.colorScheme.primary
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier= Modifier.height(16.dp))
-        Text("Ingrese su Pin", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Spacer(modifier= Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Ingrese su Pin",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
-            value=pin,
-            onValueChange={if (it.length <=6 && it.all(Char::isDigit))pin=it},
-            label={Text("PIN")},
-            visualTransformation= PasswordVisualTransformation(),
-            keyboardOptions= KeyboardOptions(keyboardType =
-                KeyboardType.NumberPassword),
-            modifier= Modifier.fillMaxWidth()
+            value = pin,
+            onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it },
+            label = { Text("PIN") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType =
+                    KeyboardType.NumberPassword
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
-        errorMessage?.let{
-            Spacer(modifier= Modifier.height(12.dp))
-            Text(it,color=MaterialTheme.colorScheme.error,style= MaterialTheme.typography.bodySmall)
+        val mensaje =
+            if (esperaMs > 0L) "Demasiados intentos. ${ReglasIntentos.texto(esperaMs)}" else errorMessage
+        mensaje?.let {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
 
-        Spacer(modifier= Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Button(
-            colors= ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            onClick = {onPinEntered(pin)},
-            modifier= Modifier.fillMaxWidth().height(50.dp)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            onClick = { onPinEntered(pin) },
+            enabled = pin.length >= ReglasPin.LARGO_MINIMO && esperaMs == 0L && !verificando,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
         ) {
-            Text("Desbloquear")
+            Text(if (verificando) "Verificando..." else "Desbloquear")
         }
-        TextButton(onClick = onBack,modifier= Modifier.padding(top=8.dp)) {
+        TextButton(onClick = onBack, modifier = Modifier.padding(top = 8.dp)) {
             Text("Volver")
         }
     }
