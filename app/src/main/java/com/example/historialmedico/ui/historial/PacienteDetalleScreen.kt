@@ -38,6 +38,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import android.widget.Toast
+import java.io.IOException
 
 @Composable
 fun PacienteDetalleScreen(
@@ -54,6 +56,7 @@ fun PacienteDetalleScreen(
     var tabSeleccionado by remember { mutableStateOf(0) }
     val scope=rememberCoroutineScope()
     val context=LocalContext.current
+    var exportando by remember { mutableStateOf(false) }
 
     BackHandler(onBack=onBack)
     Column(
@@ -79,20 +82,32 @@ fun PacienteDetalleScreen(
 
         Button(
             onClick = {
+                exportando = true
                 scope.launch {
-                    val uri = withContext(Dispatchers.IO) {
-                        val medicamentos = medicamentoDao.getByPaciente(paciente.id).first()
-                        val horasMedicas = horaMedicaDao.getByPaciente(paciente.id).first()
-                        val examenes = examenDao.getByPaciente(paciente.id).first()
-                        val presiones=presionArterialDao.getByPaciente(paciente.id).first()
-                        PdfExporter.generarPdf(
-                            context,
-                            paciente,
-                            medicamentos,
-                            horasMedicas,
-                            examenes,
-                            presiones
-                        )
+                    val uri = try {
+                        withContext(Dispatchers.IO) {
+                            val medicamentos = medicamentoDao.getByPaciente(paciente.id).first()
+                            val horasMedicas = horaMedicaDao.getByPaciente(paciente.id).first()
+                            val examenes = examenDao.getByPaciente(paciente.id).first()
+                            val presiones = presionArterialDao.getByPaciente(paciente.id).first()
+                            PdfExporter.generarPdf(
+                                context,
+                                paciente,
+                                medicamentos,
+                                horasMedicas,
+                                examenes,
+                                presiones
+                            )
+                        }
+                    } catch (e: IOException) {
+                        null
+                    } catch (e: OutOfMemoryError) {
+                        null
+                    }
+                    exportando = false
+                    if (uri == null) {
+                        Toast.makeText(context, "No se pudo generar el PDF", Toast.LENGTH_LONG).show()
+                        return@launch
                     }
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "application/pdf"
@@ -103,9 +118,10 @@ fun PacienteDetalleScreen(
                     SalidaInterna.marcar()
                 }
             },
-            modifier= Modifier.fillMaxWidth()
+            enabled = !exportando,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Exportar PDF")
+            Text(if (exportando) "Generando PDF..." else "Exportar PDF")
         }
         Spacer(modifier= Modifier.height(16.dp))
 
