@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.lifecycleScope
 import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.data.AppDataBase
+import com.example.historialmedico.export.PdfExporter
 import com.example.historialmedico.security.BiometricAuthManager
 import com.example.historialmedico.security.PinManager
 import com.example.historialmedico.security.ReglasBloqueo
@@ -54,11 +55,14 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        //Recientes no guarda una imagen con datos de salud; FLAG_SECURE impediria tomar capturas
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setRecentsScreenshotEnabled(false)
         biometricAuthManager = BiometricAuthManager(this)
         pinManager = PinManager(this)
         database = AppDataBase.getInstance(this)
         lifecycleScope.launch(Dispatchers.IO) {
             AlarmScheduler.reprogramarFaltantes(applicationContext)
+            PdfExporter.borrarTemporales(applicationContext)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&

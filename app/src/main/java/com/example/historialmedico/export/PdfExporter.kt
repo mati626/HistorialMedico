@@ -179,12 +179,18 @@ object PdfExporter {
         documento.finishPage(pagina)
 
         val carpeta = File(context.cacheDir, "pdfs")
-        if (!carpeta.exists()) carpeta.mkdirs()
+        borrarTemporales(context)
+        carpeta.mkdirs()
         val nombreArchivo = paciente.nombre.replace(Regex("[^A-Za-z0-9]"), "_")
         val archivo = File(carpeta, "historial_$nombreArchivo.pdf")
         FileOutputStream(archivo).use { documento.writeTo(it) }
         documento.close()
 
         return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", archivo)
+    }
+
+    //el PDF trae datos de salud: solo queda el ultimo, hasta exportar otro o abrir de nuevo la app
+    fun borrarTemporales(context: Context) {
+        File(context.cacheDir, "pdfs").deleteRecursively()
     }
 }
