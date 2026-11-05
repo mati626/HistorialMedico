@@ -17,7 +17,7 @@ Aplicación móvil diseñada para el registro, organización y seguimiento de la
 
 Esta aplicación almacena toda la información de forma local en el dispositivo, sin backend ni servidor externo. La decisión considera que la Ley N° 19.628, modificada por la Ley N° 21.719, clasifica los datos de salud como datos sensibles: mantenerlos en el dispositivo evita transmitirlos o almacenarlos en servidores externos. Esto no constituye una declaración de cumplimiento normativo.
 
-Seguridad actual: el PIN se guarda como hash SHA-256 dentro de EncryptedSharedPreferences (Android Keystore). La base de datos Room **no esta cifrada** (pendiente).
+Seguridad actual: el PIN se guarda con PBKDF2 y sal dentro de EncryptedSharedPreferences (Android Keystore), con límite de intentos, y la app vuelve a pedir el acceso tras 30 segundos fuera. Los datos quedan excluidos del respaldo en la nube y de la transferencia a otro dispositivo. La base de datos Room **no esta cifrada** (pendiente).
 
 El codigo esta organizado por paquetes segun responsabilidad:
 - `ui/auth` - pantallas de bloqueo, creacion y validacion de PIN.
@@ -25,7 +25,7 @@ El codigo esta organizado por paquetes segun responsabilidad:
 - `ui/historial` - lista de pacientes, detalle por paciente, y las secciones de Medicamentos (con el control de tomas y el recuento de pastillas), Horas Medicas, Examenes y presion arterial.
 - `ui/components` - selectores reutilizables de fecha y hora, y aviso de ajustes para los recordatorios.
 - `data` - entidades y DAOs de Room, y reglas de los exámenes, del recuento de pastillas y de la presion arterial.
-- `security` - biometría, manejo del PIN cifrado y regla para crear el PIN.
+- `security` - biometría, manejo del PIN cifrado, hash y limite de intentos del PIN, y reglas de bloqueo.
 - `alarms` - programacion de recordatorios, receivers de notificaciones y revisión de los permisos que necesitan.
 - `export` - generacion del PDF del historial.
 - `util` - utilidades de formato y conversión de fechas, reglas de texto compartidas por los formularios, guardado de los documentos escaneados y lectura de texto con ML Kit.
@@ -61,6 +61,7 @@ Este proyecto sigue el modelo GitFlow:
 - **feature/recuento-pastillas** - conteo de pastillas, aviso cuando quedan pocas y reposición
 - **feature/reconocimiento-texto** - lectura de recetas, cajas y presión arterial con reconocimiento de texto
 - **fix/recordatorios-samsung** - alarmas exactas con la exención de batería, aviso de ajustes y reprogramacion sin perder recordatorios pendientes
+- **fix/seguridad** - limite de intentos y hash con sal del PIN, nuevo bloqueo al volver a la app, sin respaldo de datos y menos datos de salud visibles fuera de la app
 
 ## Como Correr el Proyecto
 
@@ -85,15 +86,14 @@ Este proyecto sigue el modelo GitFlow:
 - **Exportación:** genera un PDF con el historial completo de un paciente (medicamentos, horas médicas, exámenes y presion arterial, incluidas las imágenes escaneadas) y lo comparte mediante el selector de apps del sistema.
 - **CI/CD:** GitHub Actions compila el proyecto y ejecuta las pruebas unitarias en cada push.
 - **Pruebas:**
-  - 80 casos unitarios (conversión de fechas, reglas de las alarmas, reglas del PIN, reglas del estado y la fecha de los examenes, reglas de recuento de pastillas, lectura de medicamentos y presión desde el texto escaneado, y reglas de texto con entradas invalidas: vacías, solo espacios, demasiado largas, con números, emojis o símbolos), que el CI ejecuta en cada push.
-  - 9 casos de integracion sobre la base de datos (creacion del perfil, medicamentos con alarmas y borrado en cascada de un paciente) y sobre el PIN cifrado.
+  - 99 casos unitarios (conversión de fechas, reglas de las alarmas, reglas del PIN, tiempo de bloqueo, intentos y hash del PIN, reglas del estado y la fecha de los examenes, reglas de recuento de pastillas, lectura de medicamentos y presión desde el texto escaneado, y reglas de texto con entradas invalidas: vacías, solo espacios, demasiado largas, con números, emojis o símbolos), que el CI ejecuta en cada push.
+  - 11 casos de integracion sobre la base de datos (creacion del perfil, medicamentos con alarmas y borrado en cascada de un paciente) y sobre el PIN cifrado.
   - 2 pruebas de extremo a extremo que entran con PIN: exportar el PDF de un paciente y registrar una presion arterial.
   - Las de integración y extremo a extremo se ejecutan desde Android Studio en un emulador; el CI no las ejecuta.
   - Las de extremo a extremo borran los datos de la aplicacion en el dispositivo donde se ejecutan.
 
 ## En Desarrollo y Pendiente
-- **Acceso simplificado para emergencias:** queda como trabajo futuro.
-- **Seguridad:** cifrado de la base de datos y límite de intentos de PIN.
+- **Seguridad:** cifrado de la base de datos
   
 ## Licencia
 
