@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,12 +19,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.lifecycleScope
 import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.security.BiometricAuthManager
 import com.example.historialmedico.security.PinManager
 import com.example.historialmedico.ui.theme.HistorialMedicoTheme
 import com.example.historialmedico.data.AppDataBase
+import com.example.historialmedico.security.ReglasBloqueo
+import com.example.historialmedico.security.SalidaInterna
 import com.example.historialmedico.ui.auth.LockScreen
 import com.example.historialmedico.ui.auth.CreatePinScreen
 import com.example.historialmedico.ui.auth.PinEntryScreen
@@ -63,10 +68,28 @@ class MainActivity : FragmentActivity() {
             HistorialMedicoTheme {
                 var screen by remember { mutableStateOf(if (pinManager.hasPinSet()) AuthScreen.LOCKED else AuthScreen.CREATE_PIN) }
                 var errorMessage by remember { mutableStateOf<String?>(null) }
+                var ultimaSalida by remember { mutableStateOf<Long?>(null) }
                 BackHandler(enabled = screen == AuthScreen.ENTER_PIN) {
                     screen = AuthScreen.LOCKED
                     errorMessage = null
                 }
+
+                //elapsedRealtime sigue contando con la pantalla apagada y no cambia si se ajusta la hora
+                LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+                    ultimaSalida = SystemClock.elapsedRealtime()
+                }
+
+                LifecycleEventEffect(Lifecycle.Event.ON_START) {
+                    val salida = ultimaSalida
+                    if(screen== AuthScreen.AUTHENTICATED && salida != null && ReglasBloqueo.debeBloquear(
+                            SystemClock.elapsedRealtime() - salida, SalidaInterna.activa)){
+                        screen = AuthScreen.LOCKED
+                    }
+                }
+                LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                    SalidaInterna.limpiar()
+                }
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     when (screen) {
                         AuthScreen.AUTHENTICATED -> PacientesScreen(

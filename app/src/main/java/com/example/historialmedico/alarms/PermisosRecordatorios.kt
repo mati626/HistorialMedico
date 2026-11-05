@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
+import com.example.historialmedico.security.SalidaInterna
 
 object PermisosRecordatorios {
     fun notificacionesActivas(context: Context): Boolean =
@@ -43,5 +44,6 @@ object PermisosRecordatorios {
         } catch (e: ActivityNotFoundException) {
             context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, paquete(context)))
         }
+        SalidaInterna.marcar()
     }
 }
