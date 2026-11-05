@@ -81,11 +81,23 @@ class RecordatorioReceiver : BroadcastReceiver() {
 
         crearCanalNotificacion(context)
 
-        val contentIntent = Intent(context, MainActivity::class.java)
+        //igual que tocar el icono: vuelve a la pantalla abierta y no crea otra instancia
+        val contentIntent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
         val contentPendingIntent = PendingIntent.getActivity(
             context, 0, contentIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        //lo que se ve en la pantalla de bloqueo si el telefono tiene oculto el contenido
+        val versionPublica = NotificationCompat.Builder(context, CANAL_ID)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle("Historial Medico")
+            .setContentText("Tiene un recordatorio")
+            .build()
 
         val notificacion = NotificationCompat.Builder(context, CANAL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
@@ -95,6 +107,7 @@ class RecordatorioReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(contentPendingIntent)
             .setAutoCancel(true)
+            .setPublicVersion(versionPublica)
             .build()
 
         NotificationManagerCompat.from(context).notify(alarmaId.toInt(), notificacion)
