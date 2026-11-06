@@ -42,6 +42,7 @@ import com.example.historialmedico.data.Perfil
 import com.example.historialmedico.data.PerfilDao
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import com.example.historialmedico.alarms.AlarmScheduler
@@ -83,7 +84,11 @@ fun PacientesScreen(
     val paciente = pacienteSeleccionado
     when {
         cargando -> Box(modifier = modifier.fillMaxSize())
-        perfilActual == null -> CrearPerfilScreen(perfilDao = perfilDao, modifier = modifier)
+        perfilActual == null -> CrearPerfilScreen(
+            perfilDao = perfilDao,
+            modifier = modifier.safeDrawingPadding()
+        )
+
         paciente != null -> PacienteDetalleScreen(
             paciente = paciente,
             medicamentoDao = medicamentoDao,
@@ -100,7 +105,7 @@ fun PacientesScreen(
             perfil = perfilActual,
             pacienteDao = pacienteDao,
             alarmaDao = alarmaDao,
-            modifier = modifier,
+            modifier = modifier.safeDrawingPadding(),
             onPacienteClick = { pacienteSeleccionado = it }
         )
     }
@@ -135,8 +140,8 @@ private fun ListaPacientesScreen(
     ) {
         Text("Pacientes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
-        if(hayRecordatorios){
-            AvisoRecordatorios(modifier= Modifier.padding(bottom = 8.dp))
+        if (hayRecordatorios) {
+            AvisoRecordatorios(modifier = Modifier.padding(bottom = 8.dp))
         }
 
         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -207,7 +212,7 @@ private fun ListaPacientesScreen(
                     value = nombre,
                     onValueChange = {
                         if (it.length <= CampoTexto.NOMBRE_PERSONA.maximo
-                        )nombre = it
+                        ) nombre = it
                     },
                     label = { Text("Nombre") },
                     supportingText = {
