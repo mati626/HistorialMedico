@@ -19,9 +19,13 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -34,28 +38,42 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.historialmedico.R
+import com.example.historialmedico.data.Alarma
 import com.example.historialmedico.data.AlarmaDao
+import com.example.historialmedico.data.ControlToma
 import com.example.historialmedico.data.ControlTomaDao
+import com.example.historialmedico.data.EstadoExamen
+import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.ExamenDao
+import com.example.historialmedico.data.HoraMedica
 import com.example.historialmedico.data.HoraMedicaDao
+import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.data.PresionArterial
 import com.example.historialmedico.data.PresionArterialDao
 import com.example.historialmedico.export.PdfExporter
 import com.example.historialmedico.security.SalidaInterna
+import com.example.historialmedico.util.Fechas
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,19 +91,29 @@ fun PacienteDetalleScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
 ) {
-    var pestana by rememberSaveable { mutableStateOf(Pestana.HISTORIAL) }
+    var pestana by rememberSaveable { mutableStateOf(Pestana.HOY) }
     //null = se ven las tarjetas; si no, la lista abierta
     var seccion by rememberSaveable { mutableStateOf<Seccion?>(null) }
 
     BackHandler {
-        //atras primero cierra la lista abierta y después vuelve a Pacientes
-        if (pestana == Pestana.HISTORIAL && seccion != null) seccion = null else onBack()
+        //atrás primero cierra la lista abierta y después vuelve a Hoy y desde Hoy a Pacientes
+        when {
+            pestana == Pestana.HISTORIAL && seccion != null -> seccion = null
+            pestana != Pestana.HOY -> pestana = Pestana.HOY
+            else -> onBack()
+        }
     }
 
     Scaffold(
         modifier = modifier,
         bottomBar = {
             NavigationBar {
+                NavigationBarItem(
+                    selected = pestana == Pestana.HOY,
+                    onClick = { pestana = Pestana.HOY },
+                    icon = { Icon(Icons.Filled.Home, contentDescription = null) },
+                    label = { Text("Hoy") }
+                )
                 NavigationBarItem(
                     selected = pestana == Pestana.HISTORIAL,
                     onClick = {
@@ -115,6 +143,18 @@ fun PacienteDetalleScreen(
         ) {
             val abierta = seccion
             when {
+                pestana == Pestana.HOY -> {
+                    EncabezadoPaciente(paciente, onCambiar = onBack)
+                    PestanaHoy(
+                        paciente,
+                        medicamentoDao,
+                        alarmaDao,
+                        controlTomaDao,
+                        horaMedicaDao,
+                        examenDao
+                    )
+                }
+
                 pestana == Pestana.COMPARTIR -> {
                     EncabezadoPaciente(paciente, onCambiar = onBack)
                     PestanaCompartir(
@@ -169,7 +209,14 @@ fun PacienteDetalleScreen(
 
                 else -> {
                     EncabezadoPaciente(paciente, onCambiar = onBack)
-                    TarjetasHistorial(onAbrir = { seccion = it })
+                    TarjetasHistorial(
+                        paciente,
+                        medicamentoDao,
+                        horaMedicaDao,
+                        examenDao,
+                        presionArterialDao,
+                        onAbrir = { seccion = it }
+                    )
                 }
             }
         }
@@ -200,8 +247,31 @@ private fun EncabezadoPaciente(paciente: Paciente, onCambiar: () -> Unit) {
 }
 
 @Composable
-private fun TarjetasHistorial(onAbrir: (Seccion) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun TarjetasHistorial(
+    paciente: Paciente,
+    medicamentoDao: MedicamentoDao,
+    horaMedicaDao: HoraMedicaDao,
+    examenDao: ExamenDao,
+    presionArterialDao: PresionArterialDao,
+    onAbrir: (Seccion) -> Unit
+) {
+    val ahora = rememberAhora()
+    //null hasta que Room responde, así no aparece "Ninguno todavía" por un instante
+    val medicamentos = remember(paciente.id) { medicamentoDao.getByPaciente(paciente.id) }
+        .collectAsState(initial = null).value
+    val horasMedicas = remember(paciente.id) { horaMedicaDao.getByPaciente(paciente.id) }
+        .collectAsState(initial = null).value
+    val examenes = remember(paciente.id) { examenDao.getByPaciente(paciente.id) }
+        .collectAsState(initial = null).value
+    val presiones = remember(paciente.id) { presionArterialDao.getByPaciente(paciente.id) }
+        .collectAsState(initial = null).value
+
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Text("Historial", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         //4 tarjetas en 2 filas de 2
         Seccion.entries.chunked(2).forEach { fila ->
@@ -210,6 +280,14 @@ private fun TarjetasHistorial(onAbrir: (Seccion) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 fila.forEach { s ->
+                    val resumen = when (s) {
+                        Seccion.MEDICAMENTOS -> medicamentos?.let { resumenMedicamentos(it.size) }
+                        Seccion.HORAS_MEDICAS ->
+                            horasMedicas?.let { resumenHorasMedicas(it, ahora) }
+
+                        Seccion.EXAMENES -> examenes?.let { resumenExamenes(it) }
+                        Seccion.PRESION -> presiones?.let { resumenPresion(it) }
+                    }
                     Card(
                         onClick = { onAbrir(s) },
                         modifier = Modifier
@@ -229,17 +307,283 @@ private fun TarjetasHistorial(onAbrir: (Seccion) -> Unit) {
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(32.dp)
                             )
-                            Text(
-                                s.titulo,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    s.titulo,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                resumen?.let {
+                                    Text(
+                                        it,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+private fun resumenMedicamentos(cantidad: Int): String = when (cantidad) {
+    0 -> "Ninguno todavía"
+    1 -> "1 registrado"
+    else -> "$cantidad registrados"
+}
+
+private fun resumenHorasMedicas(horas: List<HoraMedica>, ahora: Long): String {
+    val proxima = proximaHora(horas, ahora)
+    return when {
+        horas.isEmpty() -> "Ninguna todavía"
+        proxima == null -> "Sin horas próximas"
+        else -> "Próxima: ${Fechas.isoAVisible(Fechas.millisAIso(proxima.fechaHora))}"
+    }
+}
+
+private fun resumenExamenes(examenes: List<Examen>): String {
+    val pendientes = examenes.count { it.estado != EstadoExamen.REALIZADO }
+    return when {
+        examenes.isEmpty() -> "Ninguno todavía"
+        pendientes == 0 -> "Todos realizados"
+        pendientes == 1 -> "1 pendiente"
+        else -> "$pendientes pendientes"
+    }
+}
+
+//el DAO las entrega de la más nueva a la más antigua
+private fun resumenPresion(presiones: List<PresionArterial>): String =
+    presiones.firstOrNull()?.let { "Última: ${it.sistolica}/${it.diastolica}" } ?: "Sin mediciones"
+
+//el DAO las entrega ordenadas por fecha, así que la primera futura es la próxima
+private fun proximaHora(horas: List<HoraMedica>, ahora: Long): HoraMedica? =
+    horas.firstOrNull { it.fechaHora > ahora }
+
+//el DAO los entrega ordenados por fecha, uno agendado para hoy todavia cuenta como proximo
+private fun proximoExamen(examenes: List<Examen>, hoy: String): Examen? =
+    examenes.firstOrNull {
+        it.estado == EstadoExamen.AGENDADO && it.fecha != null && it.fecha >= hoy
+    }
+
+//se renueva al volver a la app, para que "hoy" y "próxima" no queden atrasados
+@Composable
+private fun rememberAhora(): Long {
+    var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { ahora = System.currentTimeMillis() }
+    return ahora
+}
+
+@Composable
+private fun PestanaHoy(
+    paciente: Paciente,
+    medicamentoDao: MedicamentoDao,
+    alarmaDao: AlarmaDao,
+    controlTomaDao: ControlTomaDao,
+    horaMedicaDao: HoraMedicaDao,
+    examenDao: ExamenDao
+) {
+    val ahora = rememberAhora()
+    val hoy = Fechas.millisAIso(ahora)
+    //null hasta que Room responde: si no, "No hay tomas" o una toma sin marcar se ven un instante
+    val medicamentos = remember(paciente.id) { medicamentoDao.getByPaciente(paciente.id) }
+        .collectAsState(initial = null).value
+    val alarmas = remember(paciente.id) { alarmaDao.getDeMedicamentos(paciente.id) }
+        .collectAsState(initial = null).value
+    val controles = remember(paciente.id, hoy) { controlTomaDao.getDelDia(paciente.id, hoy) }
+        .collectAsState(initial = null).value
+    val horasMedicas by remember(paciente.id) { horaMedicaDao.getByPaciente(paciente.id) }
+        .collectAsState(initial = emptyList())
+    val examenes by remember(paciente.id) { examenDao.getByPaciente(paciente.id) }
+        .collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+
+    val tomasDeHoy = if (medicamentos != null && alarmas != null && controles != null)
+        calcularTomasDeHoy(medicamentos, alarmas, controles) else null
+    val proxima = proximaHora(horasMedicas, ahora)
+    val examen = proximoExamen(examenes, hoy)
+
+    fun marcar(toma: TomaDeHoy, tomada: Boolean) {
+        scope.launch {
+            //si sale de la pantalla justo después de tocar, la toma igual se guarda
+            withContext(NonCancellable) {
+                controlTomaDao.marcarToma(toma.medicamento.id, hoy, toma.hora, tomada)
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Hoy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        if (tomasDeHoy != null && tomasDeHoy.isEmpty()) {
+            Text(
+                "No hay tomas para hoy. Los medicamentos con recordatorio aparecen aquí.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        tomasDeHoy?.forEach { toma ->
+            if (toma.tomada) {
+                TomaHecha(toma, onDesmarcar = { marcar(toma, false) })
+            } else {
+                TomaPendiente(toma, onTomar = { marcar(toma, true) })
+            }
+        }
+        proxima?.let {
+            TarjetaProximo(
+                etiqueta = "Próxima hora médica",
+                nombre = it.especialidad,
+                fecha = Fechas.fechaHoraVisible(it.fechaHora),
+                lugar = it.lugar
+            )
+        }
+        //proximoExamen solo devuelve agendados, que siempre tienen fechas
+        if (examen?.fecha != null) {
+            TarjetaProximo(
+                etiqueta = "Próximo examen",
+                nombre = examen.tipo,
+                fecha = Fechas.isoAVisible(examen.fecha)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TomaPendiente(toma: TomaDeHoy, onTomar: () -> Unit) {
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                "A las ${Fechas.minutosAHora(toma.hora)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "${toma.medicamento.nombre} ${toma.medicamento.dosis}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Button(
+                onClick = onTomar,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+            ) {
+                Icon(Icons.Filled.Check, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Marcar como tomada")
+            }
+        }
+    }
+}
+
+@Composable
+private fun TomaHecha(toma: TomaDeHoy, onDesmarcar: () -> Unit) {
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "A las ${Fechas.minutosAHora(toma.hora)}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "${toma.medicamento.nombre} ${toma.medicamento.dosis}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                //"Tomada" va en texto y no solo en el color de la tarjeta
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Tomada",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            //por si se marcó sin querer
+            TextButton(onClick = onDesmarcar) { Text("Desmarcar") }
+        }
+    }
+}
+
+//lo que viene, hora médica o examen: misma tarjeta para que se lean igual
+@Composable
+private fun TarjetaProximo(etiqueta: String, nombre: String, fecha: String, lugar: String? = null) {
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                etiqueta,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(fecha, style = MaterialTheme.typography.bodyLarge)
+            lugar?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+//una toma = un recordatorio de un medicamento en el día de hoy
+private data class TomaDeHoy(val medicamento: Medicamento, val hora: Int, val tomada: Boolean)
+
+//une cada recordatorio con su medicamento y con lo marcado hoy; pendientes primero y por hora
+private fun calcularTomasDeHoy(
+    medicamentos: List<Medicamento>,
+    alarmas: List<Alarma>,
+    controles: List<ControlToma>
+): List<TomaDeHoy> {
+    val porId = medicamentos.associateBy { it.id }
+    val tomadas = controles.filter { it.tomado }.map { it.medicamentoId to it.hora }.toSet()
+    return alarmas.mapNotNull { alarma ->
+        //si la alarma llega antes que su medicamento, se salta hasta la siguiente actualización
+        val medicamento = alarma.medicamentoId?.let { porId[it] } ?: return@mapNotNull null
+        val hora = alarma.hora ?: return@mapNotNull null
+        TomaDeHoy(medicamento, hora, tomada = (medicamento.id to hora) in tomadas)
+    }.sortedWith(compareBy<TomaDeHoy>({ it.tomada }, { it.hora }))
 }
 
 @Composable
@@ -253,7 +597,12 @@ private fun PestanaCompartir(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var exportando by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Text("Compartir", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Card(
             shape = MaterialTheme.shapes.large,
@@ -310,7 +659,7 @@ private fun PestanaCompartir(
                         putExtra(Intent.EXTRA_STREAM, uri)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(Intent.createChooser(intent, "Exportar Historial"))
+                    context.startActivity(Intent.createChooser(intent, "Compartir historial"))
                     SalidaInterna.marcar()
                 }
             },
@@ -327,7 +676,7 @@ private fun PestanaCompartir(
 }
 
 //pestaña de la barra inferior
-private enum class Pestana { HISTORIAL, COMPARTIR }
+private enum class Pestana { HOY, HISTORIAL, COMPARTIR }
 
 //cada tarjeta del historial abre una de estas listas
 private enum class Seccion(val titulo: String, @DrawableRes val icono: Int) {
