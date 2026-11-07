@@ -231,7 +231,12 @@ fun PacienteDetalleScreen(
                                 Seccion.HORAS_MEDICAS -> HorasMedicasSection(
                                     dao = horaMedicaDao,
                                     alarmaDao = alarmaDao,
-                                    paciente = paciente
+                                    paciente = paciente,
+                                    detalleId = detalleId,
+                                    agregando = agregando,
+                                    onVerDetalle = { detalleId = it },
+                                    onAgregar = { agregando = true },
+                                    onVolver = { volver() }
                                 )
 
                                 Seccion.EXAMENES -> ExamenesSection(
@@ -412,7 +417,7 @@ private fun proximoExamen(examenes: List<Examen>, hoy: String): Examen? =
 
 //se renueva al volver a la app, para que "hoy" y "proxima" no queden atrasados
 @Composable
-private fun rememberAhora(): Long {
+internal fun rememberAhora(): Long {
     var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { ahora = System.currentTimeMillis() }
     return ahora
