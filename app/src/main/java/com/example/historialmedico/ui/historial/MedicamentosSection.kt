@@ -2,22 +2,10 @@ package com.example.historialmedico.ui.historial
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,7 +13,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -162,65 +149,29 @@ private fun ListaMedicamentos(
             )
         }
         //fijo abajo para que siempre se vea aunque la lista sea larga
-        Button(
-            onClick = onAgregar,
-            enabled = medicamentos != null && !lleno,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .heightIn(min = 56.dp)
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Agregar medicamento")
-        }
+        BotonAgregar(
+            texto = "Agregar medicamento",
+            habilitado = medicamentos != null && !lleno,
+            onClick = onAgregar
+        )
     }
 }
 
 @Composable
 private fun TarjetaMedicamento(medicamento: Medicamento, horas: List<Int>, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                "${medicamento.nombre} ${medicamento.dosis}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                textoHorarios(horas),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            medicamento.cantidad?.let { cantidad ->
-                TextoPastillas(cantidad, medicamento.unidadesPorToma, horas.size)
-            }
-            //se puede tocar toda la tarjeta, esta fila solo muestra que lleva al detalle
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Ver detalle",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+    TarjetaLista(onClick) {
+        Text(
+            "${medicamento.nombre} ${medicamento.dosis}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            textoHorarios(horas),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        medicamento.cantidad?.let { cantidad ->
+            TextoPastillas(cantidad, medicamento.unidadesPorToma, horas.size)
         }
     }
 }

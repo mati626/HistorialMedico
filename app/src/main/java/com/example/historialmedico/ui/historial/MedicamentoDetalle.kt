@@ -1,25 +1,15 @@
 package com.example.historialmedico.ui.historial
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -102,20 +92,7 @@ fun MedicamentoDetalle(
                 Text("Ver receta")
             }
         }
-        OutlinedButton(
-            onClick = { confirmarEliminar = true },
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.error
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-        ) {
-            Icon(Icons.Filled.Delete, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Eliminar medicamento")
-        }
+        BotonEliminar("Eliminar medicamento") { confirmarEliminar = true }
     }
     if (reponiendo) {
         ReponerDialog(
@@ -129,52 +106,19 @@ fun MedicamentoDetalle(
     }
 
     if (confirmarEliminar) {
-        AlertDialog(
-            onDismissRequest = { confirmarEliminar = false },
-            title = { Text("¿Eliminar ${medicamento.nombre}?") },
-            text = {
-                Text(
-                    if (medicamento.documentoUri != null) {
-                        "También se borran sus recordatorios y la receta escaneada. No se puede deshacer."
-                    } else {
-                        "También se borran sus recordatorios. No se puede deshacer."
-                    }
-                )
+        ConfirmarEliminar(
+            titulo = "¿Eliminar ${medicamento.nombre}?",
+            texto = if (medicamento.documentoUri != null) {
+                "También se borran sus recordatorios y la receta escaneada. No se puede deshacer."
+            } else {
+                "También se borran sus recordatorios. No se puede deshacer."
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmarEliminar = false
-                    onEliminar()
-                }) {
-                    Text("Eliminar")
-                }
+            onConfirmar = {
+                confirmarEliminar = false
+                onEliminar()
             },
-            dismissButton = {
-                TextButton(onClick = { confirmarEliminar = false }) { Text("Cancelar") }
-            }
+            onCancelar = { confirmarEliminar = false }
         )
-    }
-}
-
-//tarjeta con un titulo chico arriba para agrupar datos del detalle
-@Composable
-internal fun BloqueDetalle(titulo: String, contenido: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                titulo,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            contenido()
-        }
     }
 }
 
