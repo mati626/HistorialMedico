@@ -242,7 +242,12 @@ fun PacienteDetalleScreen(
                                 Seccion.EXAMENES -> ExamenesSection(
                                     dao = examenDao,
                                     horaMedicaDao = horaMedicaDao,
-                                    paciente = paciente
+                                    paciente = paciente,
+                                    detalleId = detalleId,
+                                    agregando = agregando,
+                                    onVerDetalle = { detalleId = it },
+                                    onAgregar = { agregando = true },
+                                    onVolver = { volver() }
                                 )
 
                                 Seccion.PRESION -> PresionArterialSection(
