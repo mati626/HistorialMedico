@@ -62,7 +62,7 @@ class RecordatorioReceiver : BroadcastReceiver() {
         val horaMedicaId = alarma.horaMedicaId ?: return null
         val horaMedica = database.horaMedicaDao().getById(horaMedicaId) ?: return null
         val paciente = database.pacienteDao().getById(horaMedica.pacienteId) ?: return null
-        return "Hora medica de ${paciente.nombre}" to "${horaMedica.especialidad} en ${horaMedica.lugar}"
+        return "Hora médica de ${paciente.nombre}" to "${horaMedica.especialidad} en ${horaMedica.lugar}"
     }
 
     //null si no lleva conteo o si todavia alcanzan para mas de DIAS_AVISO dias
@@ -121,7 +121,7 @@ class RecordatorioReceiver : BroadcastReceiver() {
                 "Recordatorios",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notificaciones de medicamentos y horas medicas"
+                description = "Notificaciones de medicamentos y horas médicas"
             }
             val manager = context.getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(canal)

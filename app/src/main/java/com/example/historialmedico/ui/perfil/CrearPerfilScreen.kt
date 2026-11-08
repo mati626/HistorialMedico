@@ -50,7 +50,7 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "Crea tu perfil",
+            "Cree su perfil",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -63,7 +63,7 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
         OutlinedTextField(
             value = nombre,
             onValueChange = { if (it.length <= CampoTexto.NOMBRE_PERSONA.maximo) nombre = it },
-            label = { Text("Tu nombre") },
+            label = { Text("Su nombre") },
             supportingText = { Text("${nombre.length}/${CampoTexto.NOMBRE_PERSONA.maximo}") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -79,12 +79,12 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                "Tambien quiero registrar mi propia salud",
+                "También quiero registrar mi propia salud",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
         Text(
-            "Si solo cuidas a otras personas, desactivalo. Podras agregar pacientes despues.",
+            "Si solo cuida a otras personas, desactívelo. Podrá agregar pacientes después.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier

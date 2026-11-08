@@ -148,7 +148,7 @@ private fun ListaPacientesScreen(
             if (pacientes.isEmpty()) {
                 item {
                     Text(
-                        "No hay pacientes todavia, agrega uno abajo",
+                        "Todavía no hay pacientes. Agregue uno abajo.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 16.dp)
@@ -225,7 +225,7 @@ private fun ListaPacientesScreen(
                 OutlinedTextField(
                     value = relacion,
                     onValueChange = { if (it.length <= CampoTexto.RELACION.maximo) relacion = it },
-                    label = { Text("Relacion (ej:Yo, Hijo/a, Padre)") },
+                    label = { Text("Relación (ej: Yo, Hijo/a, Padre)") },
                     supportingText = { Text("${relacion.length}/${CampoTexto.RELACION.maximo}") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -272,7 +272,7 @@ private fun ListaPacientesScreen(
             AlertDialog(
                 onDismissRequest = { pacienteAEliminar = null },
                 title = { Text("Eliminar paciente") },
-                text = { Text("Seguro que quieres eliminar a ${paciente.nombre}? Se eliminaran tambien todos sus medicamentos, horas medicas y examenes.") },
+                text = { Text("¿Seguro que quiere eliminar a ${paciente.nombre}? También se eliminarán sus medicamentos, horas médicas, exámenes, mediciones de presión y documentos.") },
                 confirmButton = {
                     TextButton(onClick = {
                         pacienteAEliminar = null
