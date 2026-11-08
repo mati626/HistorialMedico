@@ -63,7 +63,7 @@ fun PinEntryScreen(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            "Ingrese su Pin",
+            "Ingrese su PIN",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )

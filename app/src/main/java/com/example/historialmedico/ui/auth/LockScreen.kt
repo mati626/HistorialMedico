@@ -42,13 +42,13 @@ fun LockScreen(
         )
         Spacer(modifier= Modifier.height(24.dp))
 
-        Text(text = "Aplicacion Bloqueada",
+        Text(text = "Aplicación bloqueada",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "Use su huella para acceder a su Historial Medico",
+            text = "Use su huella para acceder a su Historial Médico",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier= Modifier.padding(top=8.dp, bottom = 32.dp)
@@ -66,7 +66,7 @@ fun LockScreen(
                     contentDescription = null,modifier= Modifier.size(20.dp)
                 )
                 Spacer(modifier= Modifier.width(8.dp))
-                Text("Desbloquear con Biometria")
+                Text("Desbloquear con biometría")
             }
         }
         TextButton(onClick = onUsePinClick) {Text("Usar PIN en su lugar") }

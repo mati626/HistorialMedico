@@ -8,7 +8,7 @@ class ReglasPinTest {
 
     @Test
     fun validarNuevoPin_tresDigitos_errorDeMinimo(){
-        assertEquals("El PIN debe tener minimo 4 digitos", ReglasPin.validarNuevoPin("123","123"))
+        assertEquals("El PIN debe tener mínimo 4 dígitos", ReglasPin.validarNuevoPin("123","123"))
     }
 
     @Test

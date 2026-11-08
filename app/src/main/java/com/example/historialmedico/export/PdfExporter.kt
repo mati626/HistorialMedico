@@ -99,8 +99,8 @@ object PdfExporter {
             canvas.drawBitmap(bitmap, null, destino, null)
             y += altoFinal + 12f
         }
-        escribir("Historial Medico - ${paciente.nombre}", paintTitulo, altoLinea = 24f)
-        escribir("Relacion: ${paciente.relacion}", paintTexto)
+        escribir("Historial Médico - ${paciente.nombre}", paintTitulo, altoLinea = 24f)
+        escribir("Relación: ${paciente.relacion}", paintTexto)
         escribir("Generado el ${Fechas.fechaHoraVisible(System.currentTimeMillis())}", paintTexto)
 
         seccion("Medicamentos")
@@ -112,9 +112,9 @@ object PdfExporter {
                 dibujarImagenSiExiste(medicamento.documentoUri)
             }
         }
-        seccion("Horas Medicas")
+        seccion("Horas médicas")
         if (horasMedicas.isEmpty()) {
-            escribir("Sin horas medicas registradas", paintTexto)
+            escribir("Sin horas médicas registradas", paintTexto)
         } else {
             horasMedicas.forEach { hora ->
                 escribir(
@@ -124,9 +124,9 @@ object PdfExporter {
             }
         }
 
-        seccion("Examenes")
+        seccion("Exámenes")
         if (examenes.isEmpty()) {
-            escribir("Sin examenes registrados", paintTexto)
+            escribir("Sin exámenes registrados", paintTexto)
         } else {
             val consultasPorId = horasMedicas.associateBy { it.id }
             examenes.forEach { examen ->
@@ -147,7 +147,7 @@ object PdfExporter {
                 dibujarImagenSiExiste(examen.documentoUri)
             }
         }
-        seccion("Presion arterial")
+        seccion("Presión arterial")
         if (presiones.isEmpty()) {
             escribir("Sin mediciones registradas", paintTexto)
         } else {

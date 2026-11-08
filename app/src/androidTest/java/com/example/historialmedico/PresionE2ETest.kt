@@ -45,8 +45,8 @@ class PresionE2ETest {
     fun pruebaEntrarRegistrarPresion() {
         ActivityScenario.launch(MainActivity::class.java).use {
             //crea el pin
-            composeRule.onNodeWithText("Cree su PIN de Acceso").assertIsDisplayed()
-            composeRule.onNodeWithText("PIN (4 a 6 digitos)").performTextInput("1234")
+            composeRule.onNodeWithText("Cree su PIN de acceso").assertIsDisplayed()
+            composeRule.onNodeWithText("PIN (4 a 6 dígitos)").performTextInput("1234")
             composeRule.onNodeWithText("Confirme su PIN").performTextInput("1234")
             //accion al boton y no un touch: el teclado mueve la pantalla
             composeRule.onNodeWithText("Guardar PIN")
