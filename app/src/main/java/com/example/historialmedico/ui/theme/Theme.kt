@@ -1,87 +1,91 @@
 package com.example.historialmedico.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val FormasApp = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(18.dp),
+    extraLarge = RoundedCornerShape(24.dp)
 )
 
-val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(0.dp),
-    small = RoundedCornerShape(0.dp),
-    medium = RoundedCornerShape(0.dp),
-    large = RoundedCornerShape(0.dp),
-    extraLarge = RoundedCornerShape(0.dp)
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = AccentBlue,
+//se definen todos los colores que usa Material: los que faltan salen lavanda de la plantilla
+private val ColoresClaros = lightColorScheme(
+    primary = AzulPrincipal,
     onPrimary = Color.White,
-
-    primaryContainer = AccentBlueLight,
-    onPrimaryContainer = AccentBlueDark,
-
-    secondary = AccentBluePressed,
+    primaryContainer = AzulSuave,
+    onPrimaryContainer = AzulTexto,
+    secondary = AzulOscuro,
     onSecondary = Color.White,
-
-    background = BackgroundLight,
-    onBackground = TextPrimary,
-
-    surface = SurfaceAlt,
-    onSurface = TextPrimary,
-    surfaceVariant = NeutralGray300,
-    onSurfaceVariant = NeutralGray700,
-
-    outline = NeutralGray600
+    secondaryContainer = AzulSuave,
+    onSecondaryContainer = AzulTexto,
+    tertiary = AzulOscuro,
+    onTertiary = Color.White,
+    tertiaryContainer = AzulSuave,
+    onTertiaryContainer = AzulTexto,
+    background = FondoClaro,
+    onBackground = TextoPrincipal,
+    surface = SuperficieClara,
+    onSurface = TextoPrincipal,
+    surfaceVariant = SuperficieGris,
+    onSurfaceVariant = TextoSecundario,
+    surfaceTint = AzulPrincipal,
+    outline = BordeClaro,
+    outlineVariant = BordeSuaveClaro,
+    surfaceContainerLowest = SuperficieClara,
+    surfaceContainerLow = SuperficieClara,
+    surfaceContainer = SuperficieClara,
+    surfaceContainerHigh = SuperficieClara,
+    surfaceContainerHighest = SuperficieGris
 )
 
-@Composable
-fun historialMedicoSwitchColors()= SwitchDefaults.colors(
-    checkedThumbColor = Color.White,
-    checkedTrackColor = AccentBlue,
-    checkedBorderColor = Color.Transparent,
-    uncheckedThumbColor = NeutralGray600,
-    uncheckedTrackColor = Color.Transparent,
-    uncheckedBorderColor = NeutralGray600
+private val ColoresOscuros = darkColorScheme(
+    primary = AzulClaro,
+    onPrimary = AzulSobreClaro,
+    primaryContainer = AzulOscuro,
+    onPrimaryContainer = AzulSuave,
+    secondary = AzulClaro,
+    onSecondary = AzulSobreClaro,
+    secondaryContainer = AzulSecundarioOscuro,
+    onSecondaryContainer = AzulSuave,
+    tertiary = AzulClaro,
+    onTertiary = AzulSobreClaro,
+    tertiaryContainer = AzulSecundarioOscuro,
+    onTertiaryContainer = AzulSuave,
+    background = FondoOscuro,
+    onBackground = TextoClaro,
+    surface = SuperficieOscura,
+    onSurface = TextoClaro,
+    surfaceVariant = SuperficieOscuraMaxima,
+    onSurfaceVariant = TextoSecundarioOscuro,
+    surfaceTint = AzulClaro,
+    outline = BordeOscuro,
+    outlineVariant = BordeSuaveOscuro,
+    surfaceContainerLowest = FondoOscuro,
+    surfaceContainerLow = SuperficieOscura,
+    surfaceContainer = SuperficieOscura,
+    surfaceContainerHigh = SuperficieOscuraAlta,
+    surfaceContainerHighest = SuperficieOscuraMaxima
 )
 
 @Composable
 fun HistorialMedicoTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color esta disponible en Android 12+
-    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) ColoresOscuros else ColoresClaros,
         typography = Typography,
-        shapes = AppShapes,
+        shapes = FormasApp,
         content = content
     )
 }

@@ -1,557 +1,214 @@
 package com.example.historialmedico.ui.historial
 
-import android.app.Activity
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.historialmedico.alarms.AlarmScheduler
+import com.example.historialmedico.data.Alarma
 import com.example.historialmedico.data.AlarmaDao
-import com.example.historialmedico.data.ControlTomaDao
 import com.example.historialmedico.data.Medicamento
 import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.ReglasPastillas
-import com.example.historialmedico.ui.components.SelectorHoraDialog
 import com.example.historialmedico.util.Documentos
 import com.example.historialmedico.util.Fechas
-import com.example.historialmedico.util.LectorTexto
-import com.example.historialmedico.util.ReglasOcr
-import com.example.historialmedico.util.ReglasTexto
-import com.example.historialmedico.util.ReglasTexto.CampoTexto
-import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+internal const val MAX_MEDICAMENTOS_POR_PACIENTE = 10
+
+//lista de medicamentos, el detalle y el formulario se abren en su propia pantalla
 @Composable
 fun MedicamentosSection(
     dao: MedicamentoDao,
     alarmaDao: AlarmaDao,
-    controlTomaDao: ControlTomaDao,
-    paciente: Paciente
+    paciente: Paciente,
+    detalleId: Long?,
+    agregando: Boolean,
+    onVerDetalle: (Long) -> Unit,
+    onAgregar: () -> Unit,
+    onVolver: () -> Unit
 ) {
-    val medicamentos by remember(paciente.id) { dao.getByPaciente(paciente.id) }.collectAsState(
-        initial = emptyList()
-    )
-    val alarmas by remember(paciente.id) { alarmaDao.getDeMedicamentos(paciente.id) }.collectAsState(
-        initial = emptyList()
-    )
-    val alarmasPorMedicamento = alarmas.groupBy { it.medicamentoId }
-    var hoy by remember { mutableStateOf(Fechas.hoyIso()) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { hoy = Fechas.hoyIso() }
-    val tomas by remember(paciente.id, hoy) {
-        controlTomaDao.getDelDia(
-            paciente.id,
-            hoy
-        )
-    }.collectAsState(initial = emptyList())
-    var medicamentoAEliminar by remember { mutableStateOf<Medicamento?>(null) }
-    var medicamentoAReponer by remember { mutableStateOf<Medicamento?>(null) }
-    var nombre by remember { mutableStateOf("") }
-    var dosis by remember { mutableStateOf("") }
-    val horas = remember { mutableStateListOf<Int>() }
-    var mostrarSelectorHora by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var pastillas by remember { mutableStateOf("") }
-    var pastillasPorToma by remember { mutableStateOf("1") }
+    //null hasta que Room responde, asi no aparece "no hay medicamentos" por un instante
+    val medicamentos = remember(paciente.id) { dao.getByPaciente(paciente.id) }
+        .collectAsState(initial = null).value
+    val alarmas = remember(paciente.id) { alarmaDao.getDeMedicamentos(paciente.id) }
+        .collectAsState(initial = null).value
+    //este scope sigue vivo al cerrar el detalle o el formulario, asi guardar o borrar no se corta
     val scope = rememberCoroutineScope()
-    fun guardarToma(medicamentoId: Long, hora: Int, tomado: Boolean) {
-        scope.launch {
-            controlTomaDao.marcarToma(medicamentoId, hoy, hora, tomado)
-        }
-    }
+    val appContext = LocalContext.current.applicationContext
 
-    val context = LocalContext.current
-    val appContext = context.applicationContext
-    var documentoUri by remember { mutableStateOf<String?>(null) }
-    var aviso by remember { mutableStateOf<String?>(null) }
-
-    //prellena con lo leido, solo en los campos vacios: no pisa lo que el usuario escribio
-    suspend fun prellenarDesde(uri: Uri, conCantidad: Boolean) {
-        aviso = "Leyendo el texto..."
-        val leido = LectorTexto.leer(context, uri)?.let { ReglasOcr.leerMedicamento(it) }
-        if (leido == null) {
-            aviso = "No se pudo leer la imagen; complete los datos a mano"
-            return
-        }
-        val cantidad = if (conCantidad) leido.cantidad else null
-        if (nombre.isBlank()) leido.nombre?.let { nombre = it }
-        if (dosis.isBlank()) leido.dosis?.let { dosis = it }
-        if (pastillas.isBlank()) cantidad?.let { pastillas = it.toString() }
-        aviso = when {
-            leido.nombre == null && leido.dosis == null && cantidad == null ->
-                "No se encontraron datos; complételos a mano"
-
-            cantidad != null && horas.isEmpty() ->
-                "Revise los datos; las pastillas aparecen al agregar un recordatorio"
-
-            else -> "Revise los datos leídos antes de guardar"
-        }
-    }
-
-    val scannerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { activityResult ->
-        if (activityResult.resultCode == Activity.RESULT_OK) {
-            val resultado = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
-            val paginas = resultado?.pages
-            if (!paginas.isNullOrEmpty()) {
-                val escaneado = paginas[0].imageUri.toString()
+    when {
+        agregando -> MedicamentoFormulario(
+            paciente = paciente,
+            existentes = medicamentos.orEmpty(),
+            onGuardar = { medicamento, horas ->
                 scope.launch {
-                    val guardado = Documentos.guardar(context, escaneado)
-                    if (guardado == null) {
-                        error = "No se pudo guardar la receta escaneada"
-                    } else {
-                        documentoUri?.let { Documentos.borrar(it) }
-                        documentoUri = guardado
-                        prellenarDesde(Uri.parse(guardado), conCantidad = false)
+                    withContext(NonCancellable) {
+                        dao.insertConAlarmas(medicamento, horas).forEach {
+                            AlarmScheduler.programar(appContext, it)
+                        }
                     }
+                }
+                onVolver()
+            }
+        )
+
+        detalleId != null -> {
+            val medicamento = medicamentos?.firstOrNull { it.id == detalleId }
+            when {
+                medicamentos == null || alarmas == null -> Unit //todavia cargando
+                //ya no existe, por ejemplo si se borro y la app se reabrio en el detalle
+                medicamento == null -> LaunchedEffect(detalleId) { onVolver() }
+                else -> {
+                    val alarmasDelMedicamento = alarmas.filter { it.medicamentoId == medicamento.id }
+                    MedicamentoDetalle(
+                        medicamento = medicamento,
+                        horas = horasDe(alarmasDelMedicamento),
+                        onReponer = { pastillas ->
+                            scope.launch { dao.reponer(medicamento.id, pastillas) }
+                        },
+                        onEliminar = {
+                            alarmasDelMedicamento.forEach {
+                                AlarmScheduler.cancelar(appContext, it.id)
+                            }
+                            scope.launch {
+                                withContext(NonCancellable) {
+                                    dao.delete(medicamento)
+                                    medicamento.documentoUri?.let { Documentos.borrar(it) }
+                                }
+                            }
+                            onVolver()
+                        }
+                    )
                 }
             }
         }
-    }
 
-    //la caja solo se lee para prellenar: no se adjunta y su foto se borra del cache
-    val cajaLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { activityResult ->
-        if (activityResult.resultCode == Activity.RESULT_OK) {
-            val pagina = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
-                ?.pages?.firstOrNull()
-            if (pagina != null) {
-                scope.launch {
-                    try {
-                        prellenarDesde(pagina.imageUri, conCantidad = true)
-                    } finally {
-                        withContext(NonCancellable) { Documentos.borrar(pagina.imageUri.toString()) }
-                    }
-                }
+        else -> ListaMedicamentos(
+            //espera tambien a las alarmas para no mostrar "Sin recordatorio" un instante
+            medicamentos = if (alarmas == null) null else medicamentos,
+            alarmas = alarmas.orEmpty(),
+            onVerDetalle = onVerDetalle,
+            onAgregar = onAgregar
+        )
+    }
+}
+
+@Composable
+private fun ListaMedicamentos(
+    medicamentos: List<Medicamento>?,
+    alarmas: List<Alarma>,
+    onVerDetalle: (Long) -> Unit,
+    onAgregar: () -> Unit
+) {
+    val lleno = (medicamentos?.size ?: 0) >= MAX_MEDICAMENTOS_POR_PACIENTE
+    Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (medicamentos != null && medicamentos.isEmpty()) {
+                Text(
+                    "Todavía no hay medicamentos. Agregue el primero con el botón de abajo.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            medicamentos?.forEach { medicamento ->
+                TarjetaMedicamento(
+                    medicamento = medicamento,
+                    horas = horasDe(alarmas.filter { it.medicamentoId == medicamento.id }),
+                    onClick = { onVerDetalle(medicamento.id) }
+                )
             }
         }
+        if (lleno) {
+            Text(
+                "Llegó al máximo de $MAX_MEDICAMENTOS_POR_PACIENTE medicamentos.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+        //fijo abajo para que siempre se vea aunque la lista sea larga
+        BotonAgregar(
+            texto = "Agregar medicamento",
+            habilitado = medicamentos != null && !lleno,
+            onClick = onAgregar
+        )
     }
+}
 
-    val scanner = remember { Documentos.crearEscaner() }
-
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-    ) {
+@Composable
+private fun TarjetaMedicamento(medicamento: Medicamento, horas: List<Int>, onClick: () -> Unit) {
+    TarjetaLista(onClick) {
         Text(
-            "Medicamentos de ${paciente.nombre}", style = MaterialTheme.typography.titleMedium,
+            "${medicamento.nombre} ${medicamento.dosis}",
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        medicamentos.forEach { medicamento ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp), verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (medicamento.documentoUri != null) {
-                        TextButton(onClick = {
-                            Documentos.abrir(context, medicamento.documentoUri)
-                        }) {
-                            Text("Ver Receta")
-                        }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("${medicamento.nombre} - ${medicamento.dosis}")
-                        val alarmasDelMedicamento =
-                            alarmasPorMedicamento[medicamento.id].orEmpty()
-                        if (alarmasDelMedicamento.isNotEmpty()) {
-                            val horasDelMedicamento = alarmasDelMedicamento.mapNotNull { it.hora }
-                            val horasTomadas = tomas
-                                .filter { it.medicamentoId == medicamento.id && it.tomado }
-                                .map { it.hora }
-                            val tomadasHoy = horasDelMedicamento.count { it in horasTomadas }
-                            Text(
-                                "Tomas de hoy: $tomadasHoy de ${horasDelMedicamento.size}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            medicamento.cantidad?.let { cantidad ->
-                                val dias = ReglasPastillas.diasRestantes(
-                                    cantidad,
-                                    medicamento.unidadesPorToma,
-                                    horasDelMedicamento.size
-                                )
-                                val pocas = ReglasPastillas.quedanPocas(dias)
-                                Text(
-                                    ReglasPastillas.textoRestantes(cantidad, dias),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (pocas)
-                                        MaterialTheme.colorScheme.error
-                                    else
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                //el aviso va en texto y no solo en color, para quien no distingue el rojo
-                                if (pocas) {
-                                    Text(
-                                        "Reponga pronto",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                            TextButton(onClick = {
-                                medicamentoAReponer = medicamento
-                            }) {
-                                Text(if (medicamento.cantidad == null) "Contar pastillas" else "Reponer")
-                            }
-                            horasDelMedicamento.forEach { hora ->
-                                val tomado = hora in horasTomadas
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 48.dp)
-                                        .toggleable(
-                                            value = tomado,
-                                            role = Role.Checkbox,
-                                            onValueChange = { marcado ->
-                                                guardarToma(
-                                                    medicamento.id,
-                                                    hora,
-                                                    marcado
-                                                )
-                                            }
-                                        ),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(checked = tomado, onCheckedChange = null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(Fechas.minutosAHora(hora))
-                                }
-                            }
-                        }
-                    }
-                    IconButton(onClick = { medicamentoAEliminar = medicamento }) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "Eliminar medicamento",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            }
-        }
-        medicamentoAEliminar?.let { medicamento ->
-            AlertDialog(
-                onDismissRequest = { medicamentoAEliminar = null },
-                title = { Text("Eliminar Medicamento") },
-                text = { Text("Seguro que quieres eliminar ${medicamento.nombre}?") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        alarmasPorMedicamento[medicamento.id].orEmpty().forEach { alarma ->
-                            AlarmScheduler.cancelar(appContext, alarma.id)
-                        }
-                        scope.launch {
-                            dao.delete(medicamento)
-                            medicamento.documentoUri?.let { Documentos.borrar(it) }
-                        }
-                        medicamentoAEliminar = null
-                    }) {
-                        Text("Eliminar")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        medicamentoAEliminar = null
-                    }) {
-                        Text("Cancelar")
-                    }
-                }
-            )
-        }
-
-        medicamentoAReponer?.let { medicamento ->
-            ReponerDialog(
-                medicamento = medicamento,
-                onConfirmar = { pastillas ->
-                    scope.launch { dao.reponer(medicamento.id, pastillas) }
-                    medicamentoAReponer = null
-                },
-                onCancelar = { medicamentoAReponer = null }
-            )
-        }
-
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = nombre,
-                onValueChange = {
-                    if (it.length <= CampoTexto.MEDICAMENTO.maximo) nombre = it
-                },
-                label = { Text("Nombre") },
-                supportingText = {
-                    Text("${nombre.length}/${CampoTexto.MEDICAMENTO.maximo}")
-                },
-                singleLine = true,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            OutlinedTextField(
-                value = dosis,
-                onValueChange = {
-                    if (it.length <= CampoTexto.DOSIS.maximo) dosis = it
-                },
-                label = { Text("Dosis") },
-                supportingText = {
-                    Text("${dosis.length}/${CampoTexto.DOSIS.maximo}")
-                },
-                singleLine = true,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
         Text(
-            "Recordatorios diarios (opcional)",
-            style = MaterialTheme.typography.bodyMedium
+            textoHorarios(horas),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        horas.sorted().forEach { hora ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(Fechas.minutosAHora(hora), modifier = Modifier.weight(1f))
-                TextButton(onClick = { horas.remove(hora) }) {
-                    Text("Quitar")
-                }
-            }
-        }
-        OutlinedButton(onClick = { mostrarSelectorHora = true }) {
-            Text("Agregar hora")
-        }
-        if (mostrarSelectorHora) {
-            SelectorHoraDialog(
-                onConfirmar = { hora, minuto ->
-                    val minutos = hora * 60 + minuto
-                    if (minutos !in horas) horas.add(minutos)
-                    mostrarSelectorHora = false
-                },
-                onCancelar = { mostrarSelectorHora = false }
-            )
-        }
-        //solo los medicamentos con recordatorios llevan conteo porque solo ellos tienen casillas de toma
-        if (horas.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = pastillas,
-                onValueChange = { if (it.length <= 3 && it.all(Char::isDigit)) pastillas = it },
-                label = { Text("Pastillas que tiene (opcional)") },
-                supportingText = {
-                    Text("Avisa cuando alcancen para ${ReglasPastillas.DIAS_AVISO} días o menos")
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = pastillasPorToma,
-                onValueChange = {
-                    if (it.length <= 2 && it.all(Char::isDigit)) pastillasPorToma = it
-                },
-                label = { Text("Pastillas por toma") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = {
-            Documentos.abrirEscaner(context, scanner, scannerLauncher) {
-                error = "No se logro abrir el escaner"
-            }
-        }) {
-            Text(if (documentoUri == null) "Escanear Receta" else "Receta escaneada (volver a escanear)")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = {
-            Documentos.abrirEscaner(context, scanner, cajaLauncher) {
-                error = "No se logro abrir el escaner"
-            }
-        }) {
-            Text("Escanear Caja")
-        }
-        aviso?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(onClick = {
-            val nombreAGuardar = ReglasTexto.normalizar(nombre)
-            val dosisAGuardar = ReglasTexto.normalizar(dosis)
-            val errorTexto = ReglasTexto.validar(nombre, CampoTexto.MEDICAMENTO)
-                ?: ReglasTexto.validar(dosis, CampoTexto.DOSIS)
-            val errorPastillas = when {
-                horas.isEmpty() -> null
-                pastillas.isBlank() -> ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
-                else -> ReglasPastillas.validarCantidad(pastillas.toIntOrNull())
-                    ?: ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
-            }
-            when {
-                errorTexto != null -> error = errorTexto
-                errorPastillas != null -> error = errorPastillas
-                !dosis.any { it.isDigit() } -> error =
-                    "La dosis debe incluir un numero (ej: 500 mg)"
-
-                medicamentos.size >= MAX_MEDICAMENTOS_POR_PACIENTE -> error =
-                    "Este paciente ya tiene el maximo de $MAX_MEDICAMENTOS_POR_PACIENTE medicamentos"
-
-                medicamentos.any {
-                    ReglasTexto.normalizar(it.nombre).equals(nombreAGuardar, ignoreCase = true)
-                } -> error = "Ya existe un medicamento con ese nombre para este paciente"
-
-                else -> {
-                    val medicamento = Medicamento(
-                        pacienteId = paciente.id,
-                        nombre = nombreAGuardar,
-                        dosis = dosisAGuardar,
-                        documentoUri = documentoUri,
-                        cantidad = if (horas.isEmpty()) null else pastillas.toIntOrNull(),
-                        unidadesPorToma = if (horas.isEmpty()) 1 else pastillasPorToma.toIntOrNull()
-                            ?: 1
-                    )
-
-                    val horasAguardar = horas.toList()
-                    nombre = ""
-                    dosis = ""
-                    horas.clear()
-                    pastillas = ""
-                    pastillasPorToma = "1"
-                    documentoUri = null
-                    error = null
-                    aviso = null
-                    scope.launch {
-                        withContext(NonCancellable) {
-                            val alarmasCreadas = dao.insertConAlarmas(medicamento, horasAguardar)
-                            alarmasCreadas.forEach {
-                                AlarmScheduler.programar(appContext, it)
-                            }
-                        }
-                    }
-                }
-            }
-        }) {
-            Text("Agregar Medicamento")
-        }
-        error?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
+        medicamento.cantidad?.let { cantidad ->
+            TextoPastillas(cantidad, medicamento.unidadesPorToma, horas.size)
         }
     }
 }
 
-private const val MAX_MEDICAMENTOS_POR_PACIENTE = 10
-
+//pastillas que quedan, el aviso va en texto y no solo en rojo, para quien no distingue el color
 @Composable
-private fun ReponerDialog(
-    medicamento: Medicamento,
-    onConfirmar: (pastillas: Int) -> Unit,
-    onCancelar: () -> Unit
-) {
-    var texto by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onCancelar,
-        title = { Text("Reponer ${medicamento.nombre}") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = texto,
-                    onValueChange = { if (it.length <= 3 && it.all(Char::isDigit)) texto = it },
-                    label = { Text("Pastillas que compró") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                error?.let {
-                    Text(
-                        it, color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val pastillas = texto.toIntOrNull()
-                val errorCantidad = ReglasPastillas.validarCantidad(
-                    pastillas,
-                    actual = medicamento.cantidad ?: 0
-                )
-                when {
-                    errorCantidad != null -> error = errorCantidad
-                    pastillas != null -> onConfirmar(pastillas)
-                }
-            }) {
-                Text("Reponer")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancelar) {
-                Text("Cancelar")
-            }
+internal fun TextoPastillas(cantidad: Int, unidadesPorToma: Int, tomasPorDia: Int) {
+    val dias = ReglasPastillas.diasRestantes(cantidad, unidadesPorToma, tomasPorDia)
+    val pocas = ReglasPastillas.quedanPocas(dias)
+    Text(
+        ReglasPastillas.textoRestantes(cantidad, dias),
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (pocas) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
         }
     )
+    if (pocas) {
+        Text(
+            "Reponga pronto",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+}
+
+//horas de los recordatorios, ordenadas
+internal fun horasDe(alarmas: List<Alarma>): List<Int> = alarmas.mapNotNull { it.hora }.sorted()
+
+//[480, 1200] -> "A las 08:00 y 20:00"
+internal fun textoHorarios(horas: List<Int>): String {
+    val textos = horas.map { Fechas.minutosAHora(it) }
+    return when (textos.size) {
+        0 -> "Sin recordatorio"
+        1 -> "A las ${textos[0]}"
+        else -> "A las " + textos.dropLast(1).joinToString(", ") + " y " + textos.last()
+    }
 }

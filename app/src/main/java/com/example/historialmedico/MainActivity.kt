@@ -113,6 +113,7 @@ class MainActivity : FragmentActivity() {
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     when (screen) {
+                        //sin innerPadding: la barra inferior del paciente pone su propio relleno y debe llegar hasta el borde
                         AuthScreen.AUTHENTICATED -> PacientesScreen(
                             perfilDao = database.perfilDao(),
                             pacienteDao = database.pacienteDao(),
@@ -122,7 +123,6 @@ class MainActivity : FragmentActivity() {
                             alarmaDao = database.alarmaDao(),
                             presionArterialDao = database.presionArterialDao(),
                             controlTomaDao = database.controlTomaDao(),
-                            modifier = Modifier.padding(innerPadding)
                         )
 
                         AuthScreen.LOCKED -> LockScreen(

@@ -4,6 +4,8 @@ import android.Manifest
 import android.os.Build
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -49,15 +51,18 @@ class PresionE2ETest {
             //accion al boton y no un touch: el teclado mueve la pantalla
             composeRule.onNodeWithText("Guardar PIN")
                 .performSemanticsAction(SemanticsActions.OnClick)
-            composeRule.waitUntil(timeoutMillis = 5_000) {
-                composeRule.onAllNodesWithText("Usar PIN en su lugar").fetchSemanticsNodes().isNotEmpty()
+            //el hash del pin tarda a proposito, en un emulador lento puede pasar los 5 s
+            composeRule.waitUntil(timeoutMillis = 20_000) {
+                composeRule.onAllNodesWithText("Usar PIN en su lugar").fetchSemanticsNodes()
+                    .isNotEmpty()
             }
             //entrar con el pin
             composeRule.onNodeWithText("Usar PIN en su lugar").performClick()
             composeRule.onNodeWithText("PIN").performTextInput("1234")
             composeRule.onNodeWithText("Desbloquear")
                 .performSemanticsAction(SemanticsActions.OnClick)
-            composeRule.waitUntil(timeoutMillis = 5_000) {
+            //el hash del pin tarda a proposito, en un emulador lento puede pasar los 5 s
+            composeRule.waitUntil(timeoutMillis = 20_000) {
                 composeRule.onAllNodesWithText("Crea tu perfil").fetchSemanticsNodes().isNotEmpty()
             }
             //crea el perfil y elige al paciente
@@ -69,13 +74,20 @@ class PresionE2ETest {
                 composeRule.onAllNodesWithText("Yo").fetchSemanticsNodes().isNotEmpty()
             }
             composeRule.onNodeWithText("Juan Perez").performClick()
-            //registrar presion
-            composeRule.onNodeWithText("Presion").performScrollTo().performClick()
-            composeRule.onNodeWithText("Sistolica").performTextInput("120")
-            composeRule.onNodeWithText("Diastolica").performTextInput("80")
-            composeRule.onNodeWithText("Agregar Medicion").performScrollTo().performSemanticsAction(
-                SemanticsActions.OnClick)
-            composeRule.waitUntil(timeoutMillis = 5_000){
+            //la ficha abre en Hoy, la presion esta en Historial
+            composeRule.onNodeWithText("Historial").performClick()
+            composeRule.onNodeWithText("Presión").performClick()
+            //el boton se habilita cuando la lista termina de cargar
+            composeRule.waitUntil(timeoutMillis = 5_000) {
+                composeRule.onAllNodes(hasText("Agregar medición") and isEnabled())
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithText("Agregar medición").performClick()
+            composeRule.onNodeWithText("Sistólica (la alta)").performTextInput("120")
+            composeRule.onNodeWithText("Diastólica (la baja)").performTextInput("80")
+            composeRule.onNodeWithText("Guardar medición").performScrollTo()
+                .performSemanticsAction(SemanticsActions.OnClick)
+            composeRule.waitUntil(timeoutMillis = 5_000) {
                 composeRule.onAllNodesWithText("120/80 mmHg").fetchSemanticsNodes().isNotEmpty()
             }
             //la medicion aparece en la lista como sistolica/diastolica mmHg
