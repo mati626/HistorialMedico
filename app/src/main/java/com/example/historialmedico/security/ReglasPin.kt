@@ -4,10 +4,10 @@ package com.example.historialmedico.security
 object ReglasPin{
     const val LARGO_MINIMO = 4
 
-    //devuelve el mensaje de error, o null esi el PIN se puede guardar
+    //devuelve el mensaje de error, o null si el PIN se puede guardar
     fun validarNuevoPin(pin: String, confirmacion: String): String? =
         when{
-            pin.length < LARGO_MINIMO -> "El PIN debe tener minimo $LARGO_MINIMO digitos"
+            pin.length < LARGO_MINIMO -> "El PIN debe tener mínimo $LARGO_MINIMO dígitos"
             pin != confirmacion -> "Los PIN no coinciden"
             else -> null
         }

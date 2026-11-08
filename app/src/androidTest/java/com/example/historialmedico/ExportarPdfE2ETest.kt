@@ -7,6 +7,8 @@ import android.content.Intent
 import android.os.Build
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -67,18 +69,22 @@ class ExportarPdfE2ETest {
     fun pruebaCrearPinEntrarExportar() {
         ActivityScenario.launch(MainActivity::class.java).use {
             //crea el pin
-            composeRule.onNodeWithText("Cree su PIN de Acceso").assertIsDisplayed()
-            composeRule.onNodeWithText("PIN (4 a 6 digitos)").performTextInput("1234")
+            composeRule.onNodeWithText("Cree su PIN de acceso").assertIsDisplayed()
+            composeRule.onNodeWithText("PIN (4 a 6 dígitos)").performTextInput("1234")
             composeRule.onNodeWithText("Confirme su PIN").performTextInput("1234")
             //accion al boton y no un touch: el teclado mueve la pantalla
             composeRule.onNodeWithText("Guardar PIN")
                 .performSemanticsAction(SemanticsActions.OnClick)
+            composeRule.waitUntil(timeoutMillis = 20_000) {
+                composeRule.onAllNodesWithText("Usar PIN en su lugar").fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
             //entrar con el pin
             composeRule.onNodeWithText("Usar PIN en su lugar").performClick()
             composeRule.onNodeWithText("PIN").performTextInput("1234")
             composeRule.onNodeWithText("Desbloquear")
                 .performSemanticsAction(SemanticsActions.OnClick)
-            composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.waitUntil(timeoutMillis = 20_000) {
                 composeRule.onAllNodesWithText("Crea tu perfil").fetchSemanticsNodes().isNotEmpty()
             }
             //crea el perfil y elige al paciente
@@ -90,20 +96,29 @@ class ExportarPdfE2ETest {
                 composeRule.onAllNodesWithText("Yo").fetchSemanticsNodes().isNotEmpty()
             }
             composeRule.onNodeWithText("Juan Perez").performClick()
+            //la ficha abre en Hoy, los medicamentos estan en Historial
+            composeRule.onNodeWithText("Historial").performClick()
+            composeRule.onNodeWithText("Medicamentos").performClick()
+            //el boton se habilita cuando la lista termina de cargar
+            composeRule.waitUntil(timeoutMillis = 5_000) {
+                composeRule.onAllNodes(hasText("Agregar medicamento") and isEnabled())
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithText("Agregar medicamento").performClick()
             composeRule.onNodeWithText("Nombre").performTextInput("Enalapril Maleato")
             composeRule.onNodeWithText("Dosis").performTextInput("10 mg")
-            composeRule.onNodeWithText("Agregar Medicamento").performScrollTo()
+            composeRule.onNodeWithText("Guardar medicamento").performScrollTo()
                 .performSemanticsAction(SemanticsActions.OnClick)
             composeRule.waitUntil(timeoutMillis = 5_000) {
-                composeRule.onAllNodesWithText("Enalapril Maleato - 10 mg").fetchSemanticsNodes()
+                composeRule.onAllNodesWithText("Enalapril Maleato 10 mg").fetchSemanticsNodes()
                     .isNotEmpty()
             }
-            composeRule.onNodeWithText("Enalapril Maleato - 10 mg").performScrollTo()
-                .assertIsDisplayed()
+            composeRule.onNodeWithText("Enalapril Maleato 10 mg").assertIsDisplayed()
             //exportar pdf sin abrir las opciones de sistema
             intending(hasAction(Intent.ACTION_CHOOSER))
                 .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))
-            composeRule.onNodeWithText("Exportar PDF").performClick()
+            composeRule.onNodeWithText("Compartir").performClick()
+            composeRule.onNodeWithText("Compartir historial en PDF").performClick()
             composeRule.waitUntil(timeoutMillis = 10_000) {
                 Intents.getIntents().any { it.action == Intent.ACTION_CHOOSER }
             }
@@ -116,9 +131,9 @@ class ExportarPdfE2ETest {
                     )
                 )
             )
-            val archivos= File(context.cacheDir, "pdfs").listFiles().orEmpty()
+            val archivos = File(context.cacheDir, "pdfs").listFiles().orEmpty()
             assertEquals(1, archivos.size)
-            assertTrue(archivos[0].length()>0)
+            assertTrue(archivos[0].length() > 0)
         }
     }
 }

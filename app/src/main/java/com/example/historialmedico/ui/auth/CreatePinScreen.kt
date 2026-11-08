@@ -55,9 +55,9 @@ fun CreatePinScreen(
         )
         Spacer(modifier= Modifier.height(16.dp))
 
-        Text("Cree su PIN de Acceso", style = MaterialTheme.typography.titleLarge,
+        Text("Cree su PIN de acceso", style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold)
-        Text("Su pin se usara si la biometria falla",
+        Text("Su PIN se usará si la biometría falla",
             style = MaterialTheme.typography.bodyMedium,
             color= MaterialTheme.colorScheme.onSurfaceVariant,
             modifier= Modifier.padding(top = 8.dp, bottom = 24.dp)
@@ -65,7 +65,7 @@ fun CreatePinScreen(
         OutlinedTextField(
             value = pin,
             onValueChange = {if(it.length<=6&&it.all(Char::isDigit))pin=it},
-            label = {Text("PIN (4 a 6 digitos)")},
+            label = {Text("PIN (4 a 6 dígitos)")},
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             modifier= Modifier.fillMaxWidth()

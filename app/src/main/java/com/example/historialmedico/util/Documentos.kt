@@ -1,11 +1,16 @@
 package com.example.historialmedico.util
 
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.IntentSenderRequest
 import androidx.core.content.FileProvider
+import com.example.historialmedico.security.SalidaInterna
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanner
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
@@ -24,6 +29,26 @@ object Documentos {
             .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
             .build()
     )
+
+    //abre el escaner; si no se puede, avisa con onError
+    fun abrirEscaner(
+        context: Context,
+        escaner: GmsDocumentScanner,
+        launcher: ActivityResultLauncher<IntentSenderRequest>,
+        onError: () -> Unit
+    ) {
+        val activity = buscarActivity(context)
+        if (activity == null) {
+            onError()
+            return
+        }
+        escaner.getStartScanIntent(activity)
+            .addOnSuccessListener {
+                SalidaInterna.marcar()
+                launcher.launch(IntentSenderRequest.Builder(it).build())
+            }
+            .addOnFailureListener { onError() }
+    }
 
     //copia el escaneo del ML kit al almacenamiento interno (queda en cache y android puede borrarlo)
     suspend fun guardar(context: Context, uriEscaneo: String): String? =
@@ -65,6 +90,7 @@ object Documentos {
         }
         try {
             context.startActivity(intent)
+            SalidaInterna.marcar()
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(context, "No hay una app para ver imágenes", Toast.LENGTH_SHORT).show()
         }
@@ -72,4 +98,13 @@ object Documentos {
 
     private fun archivo(uriDocumento: String): File? =
         Uri.parse(uriDocumento).path?.let { File(it) }
+
+    //el context puede venir envuelto: se desenvuelve hasta llegar a activity
+    private tailrec fun buscarActivity(context: Context): Activity? = when (context) {
+        is Activity -> context
+        is ContextWrapper ->
+            buscarActivity(context.baseContext)
+
+        else -> null
+    }
 }
