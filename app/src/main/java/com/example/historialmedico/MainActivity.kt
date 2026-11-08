@@ -131,7 +131,7 @@ class MainActivity : FragmentActivity() {
                             showBiometricOption = biometricAuthManager.canAuthenticate(),
                             onUnlockClick = {
                                 biometricAuthManager.authenticate(
-                                    title = "Historial Medico",
+                                    title = "Historial Médico",
                                     subtitle = "Ingrese sus datos para continuar",
                                     negativeButtonText = "Cancelar",
                                     onSuccess = {
@@ -145,7 +145,7 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onFailed = {
                                         errorMessage =
-                                            "No se reconoce la biometria, intente nuevamente "
+                                            "No se reconoce la biometría, intente nuevamente"
                                     }
                                 )
                             },

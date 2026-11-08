@@ -43,8 +43,8 @@ class PinIncorrectoE2ETest {
     fun pruebaPinIncorrecto() {
         ActivityScenario.launch(MainActivity::class.java).use {
             //crea el pin 1234
-            composeRule.onNodeWithText("Cree su PIN de Acceso").assertIsDisplayed()
-            composeRule.onNodeWithText("PIN (4 a 6 digitos)").performTextInput("1234")
+            composeRule.onNodeWithText("Cree su PIN de acceso").assertIsDisplayed()
+            composeRule.onNodeWithText("PIN (4 a 6 dígitos)").performTextInput("1234")
             composeRule.onNodeWithText("Confirme su PIN").performTextInput("1234")
             composeRule.onNodeWithText("Guardar PIN")
                 .performSemanticsAction(SemanticsActions.OnClick)
@@ -61,7 +61,7 @@ class PinIncorrectoE2ETest {
                 composeRule.onAllNodesWithText("PIN incorrecto").fetchSemanticsNodes().isNotEmpty()
             }
             //no entro, sigue en la pantalla del pin con el aviso
-            composeRule.onNodeWithText("Ingrese su Pin").assertIsDisplayed()
+            composeRule.onNodeWithText("Ingrese su PIN").assertIsDisplayed()
             composeRule.onNodeWithText("PIN incorrecto").assertIsDisplayed()
             //borra el pin equivocado y entra con el correcto
             composeRule.onNodeWithText("PIN").performTextClearance()

@@ -95,7 +95,7 @@ class RecordatorioReceiver : BroadcastReceiver() {
         //lo que se ve en la pantalla de bloqueo si el telefono tiene oculto el contenido
         val versionPublica = NotificationCompat.Builder(context, CANAL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Historial Medico")
+            .setContentTitle("Historial Médico")
             .setContentText("Tiene un recordatorio")
             .build()
 
