@@ -744,5 +744,5 @@ private enum class Seccion(
     MEDICAMENTOS("Medicamentos", "Agregar medicamento", R.drawable.ic_medicamento),
     HORAS_MEDICAS("Horas médicas", "Agregar hora médica", R.drawable.ic_hora_medica),
     EXAMENES("Exámenes", "Agregar examen", R.drawable.ic_examen),
-    PRESION("Presión", "Agregar medicion", R.drawable.ic_presion)
+    PRESION("Presión", "Agregar medición", R.drawable.ic_presion)
 }

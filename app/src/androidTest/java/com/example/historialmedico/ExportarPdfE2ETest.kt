@@ -85,11 +85,11 @@ class ExportarPdfE2ETest {
             composeRule.onNodeWithText("Desbloquear")
                 .performSemanticsAction(SemanticsActions.OnClick)
             composeRule.waitUntil(timeoutMillis = 20_000) {
-                composeRule.onAllNodesWithText("Crea tu perfil").fetchSemanticsNodes().isNotEmpty()
+                composeRule.onAllNodesWithText("Cree su perfil").fetchSemanticsNodes().isNotEmpty()
             }
             //crea el perfil y elige al paciente
-            composeRule.onNodeWithText("Crea tu perfil").assertIsDisplayed()
-            composeRule.onNodeWithText("Tu nombre").performTextInput("Juan Perez")
+            composeRule.onNodeWithText("Cree su perfil").assertIsDisplayed()
+            composeRule.onNodeWithText("Su nombre").performTextInput("Juan Perez")
             composeRule.onNodeWithText("Continuar").performSemanticsAction(SemanticsActions.OnClick)
             //"Yo" es la relacion del titular: solo aparece en la lista de pacientes
             composeRule.waitUntil(timeoutMillis = 5_000) {

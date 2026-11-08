@@ -60,10 +60,10 @@ class PastillasE2ETest {
             composeRule.onNodeWithText("Desbloquear")
                 .performSemanticsAction(SemanticsActions.OnClick)
             composeRule.waitUntil(timeoutMillis = 20_000) {
-                composeRule.onAllNodesWithText("Crea tu perfil").fetchSemanticsNodes().isNotEmpty()
+                composeRule.onAllNodesWithText("Cree su perfil").fetchSemanticsNodes().isNotEmpty()
             }
             //crea el perfil y elige al paciente
-            composeRule.onNodeWithText("Tu nombre").performTextInput("Juan Perez")
+            composeRule.onNodeWithText("Su nombre").performTextInput("Juan Perez")
             composeRule.onNodeWithText("Continuar").performSemanticsAction(SemanticsActions.OnClick)
             composeRule.waitUntil(timeoutMillis = 5_000) {
                 composeRule.onAllNodesWithText("Yo").fetchSemanticsNodes().isNotEmpty()
