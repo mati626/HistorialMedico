@@ -21,7 +21,7 @@ interface PerfilDao {
     suspend fun crearPerfil(nombre: String,registrarTitular: Boolean){
         val perfilId=insert(Perfil(nombre=nombre))
         if(registrarTitular){
-            insertPaciente(Paciente(perfilId=perfilId, nombre = nombre, relacion = "Yo"))
+            insertPaciente(Paciente(perfilId=perfilId, nombre = nombre, relacion = ReglasPaciente.YO))
         }
     }
 

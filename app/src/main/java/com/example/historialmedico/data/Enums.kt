@@ -38,4 +38,6 @@ enum class GrupoSanguineo(val etiqueta: String){
     AB_NEGATIVO("AB-"),
     O_POSITIVO("O+"),
     O_NEGATIVO("O-"),
+    //no todos saben su grupo sanguineo, mejor eso que tomar uno aleatorio
+    NO_SABE("No lo sabe")
 }
