@@ -39,4 +39,9 @@ class FechasTest {
     fun isoAvisible_conBarrasQuedaIgual(){
         assertEquals("18/10/2026", Fechas.isoAVisible("18/10/2026"))
     }
+
+    @Test
+    fun isoAUtcMillis_primeroDeEnero1970_esCero(){
+        assertEquals(0L, Fechas.isoAUtcMillis("1970-01-01"))
+    }
 }
