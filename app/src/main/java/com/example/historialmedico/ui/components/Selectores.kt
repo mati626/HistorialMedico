@@ -29,9 +29,10 @@ import java.util.Calendar
 @Composable
 fun SelectorFechaDialog(
     onConfirmar: (Long) -> Unit,
-    onCancelar: () -> Unit
+    onCancelar: () -> Unit,
+    inicial: Long? = null
 ) {
-    val estado = rememberDatePickerState()
+    val estado = rememberDatePickerState(initialSelectedDateMillis = inicial)
     DatePickerDialog(
         onDismissRequest = onCancelar,
         confirmButton = {
@@ -81,9 +82,8 @@ fun SelectorHoraDialog(
 fun SelectorFechaHoraDialog(
     onConfirmar: (Long) -> Unit,
     onCancelar: () -> Unit,
-    inicial: Long?= null
+
 ) {
-    val estado =rememberDatePickerState(initialSelectedDateMillis =inicial )
     var fechaUtcMillis by remember { mutableStateOf<Long?>(null) }
     val fecha = fechaUtcMillis
     if (fecha == null) {
