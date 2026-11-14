@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,7 +72,7 @@ fun PacientesScreen(
 ) {
     var cargando by remember { mutableStateOf(true) }
     var perfil by remember { mutableStateOf<Perfil?>(null) }
-    var pacienteSeleccionado by remember { mutableStateOf<Paciente?>(null) }
+    var pacienteId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(perfilDao) {
         perfilDao.getPerfil().collect {
@@ -81,48 +82,60 @@ fun PacientesScreen(
     }
 
     val perfilActual = perfil
-    val paciente = pacienteSeleccionado
     when {
         cargando -> Box(modifier = modifier.fillMaxSize())
         perfilActual == null -> CrearPerfilScreen(
             perfilDao = perfilDao,
             modifier = modifier.safeDrawingPadding()
         )
+        else -> {
+            //null hasta que Room responde, asi no aparece la lista vacia por un momento
+            val pacientes = remember(perfilActual.id) {
+                pacienteDao.getByPerfil(perfilActual.id)
+            }
+                .collectAsState(initial = null).value
+            val paciente = pacientes?.firstOrNull { it.id == pacienteId }
+            when {
+                pacientes == null -> Box(modifier = modifier.fillMaxSize())
+                paciente != null -> PacienteDetalleScreen(
+                    paciente = paciente,
+                    medicamentoDao = medicamentoDao,
+                    horaMedicaDao = horaMedicaDao,
+                    controlTomaDao = controlTomaDao,
+                    examenDao = examenDao,
+                    alarmaDao = alarmaDao,
+                    presionArterialDao = presionArterialDao,
+                    modifier = modifier,
+                    onBack = { pacienteId = null }
+                )
 
-        paciente != null -> PacienteDetalleScreen(
-            paciente = paciente,
-            medicamentoDao = medicamentoDao,
-            horaMedicaDao = horaMedicaDao,
-            controlTomaDao = controlTomaDao,
-            examenDao = examenDao,
-            alarmaDao = alarmaDao,
-            presionArterialDao = presionArterialDao,
-            modifier = modifier,
-            onBack = { pacienteSeleccionado = null }
-        )
+                //ya no existe, por ejemplo si se elimino desde su ficha
+                pacienteId != null -> LaunchedEffect(pacienteId) {
+                    pacienteId = null
+                }
 
-        else -> ListaPacientesScreen(
-            perfil = perfilActual,
-            pacienteDao = pacienteDao,
-            alarmaDao = alarmaDao,
-            modifier = modifier.safeDrawingPadding(),
-            onPacienteClick = { pacienteSeleccionado = it }
-        )
+                else -> ListaPacientesScreen(
+                    perfil = perfilActual,
+                    pacientes = pacientes,
+                    pacienteDao = pacienteDao,
+                    alarmaDao = alarmaDao,
+                    modifier = modifier.safeDrawingPadding(),
+                    onPacienteClick = { pacienteId = it.id }
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun ListaPacientesScreen(
     perfil: Perfil,
+    pacientes: List<Paciente>,
     pacienteDao: PacienteDao,
     alarmaDao: AlarmaDao,
     modifier: Modifier = Modifier,
     onPacienteClick: (Paciente) -> Unit
 ) {
-    val pacientes by remember(perfil.id) {
-        pacienteDao.getByPerfil(perfil.id)
-    }
-        .collectAsState(initial = emptyList())
     var nombre by remember { mutableStateOf("") }
     var relacion by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
