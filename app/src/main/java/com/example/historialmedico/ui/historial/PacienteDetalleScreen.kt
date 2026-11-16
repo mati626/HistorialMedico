@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material.icons.filled.Person
-import com.example.historialmedico.data.ReglasPaciente
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -72,6 +71,7 @@ import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PresionArterial
 import com.example.historialmedico.data.PresionArterialDao
+import com.example.historialmedico.data.ReglasPaciente
 import com.example.historialmedico.export.PdfExporter
 import com.example.historialmedico.security.SalidaInterna
 import com.example.historialmedico.util.Fechas
@@ -315,24 +315,6 @@ fun PacienteDetalleScreen(
                 }
             }
         }
-    }
-}
-
-//boton Volver y titulo arriba de las listas y formularios, null = sin titulo
-@Composable
-private fun BarraVolver(titulo: String?, onVolver: () -> Unit) {
-    TextButton(onClick = onVolver) {
-        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-        Spacer(Modifier.width(8.dp))
-        Text("Volver")
-    }
-    if (titulo != null) {
-        Text(
-            titulo,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(12.dp))
     }
 }
 
