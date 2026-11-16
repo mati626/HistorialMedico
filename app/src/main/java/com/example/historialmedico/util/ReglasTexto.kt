@@ -13,7 +13,6 @@ object ReglasTexto {
     enum class CampoTexto(val etiqueta: String, val maximo: Int, val tipo: TipoTexto) {
         NOMBRE_PERSONA("Nombre", 50, TipoTexto.NOMBRE),
         ESPECIALIDAD("Especialidad", 50, TipoTexto.NOMBRE),
-        RELACION("Relación", 20, TipoTexto.GENERAL),
         MEDICAMENTO("Nombre del medicamento", 50, TipoTexto.GENERAL),
         DOSIS("Dosis", 30, TipoTexto.GENERAL),
         LUGAR("Lugar", 80, TipoTexto.GENERAL),
