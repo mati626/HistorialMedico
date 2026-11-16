@@ -712,7 +712,7 @@ private fun PestanaCompartir(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    "Incluye medicamentos, horas médicas, exámenes, presión y documentos escaneados.",
+                    "Incluye la ficha del paciente, medicamentos, horas médicas, exámenes, presión y documentos escaneados.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
