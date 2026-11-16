@@ -36,6 +36,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.content.Context
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import com.example.historialmedico.data.ExamenDao
 import com.example.historialmedico.data.HoraMedicaDao
 import com.example.historialmedico.data.MedicamentoDao
@@ -73,6 +76,9 @@ fun PacientesScreen(
     var cargando by remember { mutableStateOf(true) }
     var perfil by remember { mutableStateOf<Perfil?>(null) }
     var pacienteId by rememberSaveable { mutableStateOf<Long?>(null) }
+    //sigue vivo al salir del paciente, asi guardar o eliminar no se corta a la mitad
+    val scope = rememberCoroutineScope()
+    val appContext = LocalContext.current.applicationContext
 
     LaunchedEffect(perfilDao) {
         perfilDao.getPerfil().collect {
@@ -88,6 +94,7 @@ fun PacientesScreen(
             perfilDao = perfilDao,
             modifier = modifier.safeDrawingPadding()
         )
+
         else -> {
             //null hasta que Room responde, asi no aparece la lista vacia por un momento
             val pacientes = remember(perfilActual.id) {
@@ -99,12 +106,21 @@ fun PacientesScreen(
                 pacientes == null -> Box(modifier = modifier.fillMaxSize())
                 paciente != null -> PacienteDetalleScreen(
                     paciente = paciente,
+                    pacientes = pacientes,
                     medicamentoDao = medicamentoDao,
                     horaMedicaDao = horaMedicaDao,
                     controlTomaDao = controlTomaDao,
                     examenDao = examenDao,
                     alarmaDao = alarmaDao,
                     presionArterialDao = presionArterialDao,
+                    onGuardarPaciente = { editado ->
+                        scope.launch { withContext(NonCancellable) { pacienteDao.update(editado) } }
+                    },
+                    onEliminarPaciente = {
+                        //primero se sale del paciente, asi no se ve mientras se borra
+                        pacienteId = null
+                        scope.launch { eliminarPaciente(appContext, paciente, pacienteDao, alarmaDao) }
+                    },
                     modifier = modifier,
                     onBack = { pacienteId = null }
                 )
@@ -308,5 +324,21 @@ private fun ListaPacientesScreen(
                 }
             )
         }
+    }
+}
+
+//Room borra en cascada las filas, pero las alarmas del sistema y los archivos hay que borrarlos aparte
+private suspend fun eliminarPaciente(
+    context: Context,
+    paciente: Paciente,
+    pacienteDao: PacienteDao,
+    alarmaDao: AlarmaDao
+) {
+    withContext(NonCancellable) {
+        alarmaDao.getIdsByPaciente(paciente.id).forEach { AlarmScheduler.cancelar(context, it) }
+        //se leen antes de borrar, despues ya no quedan en la base
+        val documentos = pacienteDao.getDocumentos(paciente.id)
+        pacienteDao.delete(paciente)
+        documentos.forEach { Documentos.borrar(it) }
     }
 }
