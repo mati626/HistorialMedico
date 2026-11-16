@@ -54,4 +54,16 @@ object ReglasPaciente {
                 else -> null
             }
     }
+
+    //los pacientes guardados antes de la ficha solo tienen nombre y relacion
+    fun fichaCompleta(paciente: Paciente): Boolean =
+        paciente.relacion in RELACIONES && paciente.fechaNacimiento != null &&
+                paciente.sexo != null && paciente.estadoCivil != null &&
+                paciente.prevision != null && paciente.grupoSanguineo != null
+
+    //"1 año" y no "1 años"
+    fun textoEdad(fechaNacimiento: String, hoy: String): String {
+        val anios = edad(fechaNacimiento, hoy)
+        return if (anios == 1) "1 año" else "$anios años"
+    }
 }

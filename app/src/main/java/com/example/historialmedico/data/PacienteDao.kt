@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
+import androidx.room.Update
 
 @Dao
 interface PacienteDao {
@@ -24,6 +25,9 @@ interface PacienteDao {
 
     @Insert
     suspend fun insert(paciente: Paciente): Long
+
+    @Update
+    suspend fun update(paciente: Paciente)
 
     @Delete
     suspend fun delete(paciente: Paciente)
