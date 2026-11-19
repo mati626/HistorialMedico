@@ -1,61 +1,50 @@
 package com.example.historialmedico.ui.historial
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import android.content.Context
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.historialmedico.data.ExamenDao
-import com.example.historialmedico.data.HoraMedicaDao
-import com.example.historialmedico.data.MedicamentoDao
-import com.example.historialmedico.data.Perfil
-import com.example.historialmedico.data.PerfilDao
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
 import com.example.historialmedico.alarms.AlarmScheduler
 import com.example.historialmedico.data.AlarmaDao
 import com.example.historialmedico.data.ControlTomaDao
+import com.example.historialmedico.data.ExamenDao
+import com.example.historialmedico.data.HoraMedicaDao
+import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PacienteDao
+import com.example.historialmedico.data.Perfil
+import com.example.historialmedico.data.PerfilDao
 import com.example.historialmedico.data.PresionArterialDao
+import com.example.historialmedico.data.ReglasPaciente
 import com.example.historialmedico.ui.components.AvisoRecordatorios
 import com.example.historialmedico.ui.perfil.CrearPerfilScreen
 import com.example.historialmedico.util.Documentos
-import com.example.historialmedico.util.ReglasTexto.CampoTexto
-import com.example.historialmedico.util.ReglasTexto
+import com.example.historialmedico.util.Fechas
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PacientesScreen(
@@ -71,7 +60,12 @@ fun PacientesScreen(
 ) {
     var cargando by remember { mutableStateOf(true) }
     var perfil by remember { mutableStateOf<Perfil?>(null) }
-    var pacienteSeleccionado by remember { mutableStateOf<Paciente?>(null) }
+    var pacienteId by rememberSaveable { mutableStateOf<Long?>(null) }
+    //true mientras se llena el formulario de un paciente nuevo
+    var agregando by rememberSaveable { mutableStateOf(false) }
+    //sigue vivo al salir del paciente, asi guardar o eliminar no se corta a la mitad
+    val scope = rememberCoroutineScope()
+    val appContext = LocalContext.current.applicationContext
 
     LaunchedEffect(perfilDao) {
         perfilDao.getPerfil().collect {
@@ -81,7 +75,6 @@ fun PacientesScreen(
     }
 
     val perfilActual = perfil
-    val paciente = pacienteSeleccionado
     when {
         cargando -> Box(modifier = modifier.fillMaxSize())
         perfilActual == null -> CrearPerfilScreen(
@@ -89,211 +82,181 @@ fun PacientesScreen(
             modifier = modifier.safeDrawingPadding()
         )
 
-        paciente != null -> PacienteDetalleScreen(
-            paciente = paciente,
-            medicamentoDao = medicamentoDao,
-            horaMedicaDao = horaMedicaDao,
-            controlTomaDao = controlTomaDao,
-            examenDao = examenDao,
-            alarmaDao = alarmaDao,
-            presionArterialDao = presionArterialDao,
-            modifier = modifier,
-            onBack = { pacienteSeleccionado = null }
-        )
+        else -> {
+            //null hasta que Room responde, asi no aparece la lista vacia por un momento
+            val pacientes = remember(perfilActual.id) {
+                pacienteDao.getByPerfil(perfilActual.id)
+            }
+                .collectAsState(initial = null).value
+            val paciente = pacientes?.firstOrNull { it.id == pacienteId }
+            when {
+                pacientes == null -> Box(modifier = modifier.fillMaxSize())
+                paciente != null -> PacienteDetalleScreen(
+                    paciente = paciente,
+                    pacientes = pacientes,
+                    medicamentoDao = medicamentoDao,
+                    horaMedicaDao = horaMedicaDao,
+                    controlTomaDao = controlTomaDao,
+                    examenDao = examenDao,
+                    alarmaDao = alarmaDao,
+                    presionArterialDao = presionArterialDao,
+                    onGuardarPaciente = { editado ->
+                        scope.launch { withContext(NonCancellable) { pacienteDao.update(editado) } }
+                    },
+                    onEliminarPaciente = {
+                        //primero se sale del paciente, asi no se ve mientras se borra
+                        pacienteId = null
+                        scope.launch { eliminarPaciente(appContext, paciente, pacienteDao, alarmaDao) }
+                    },
+                    modifier = modifier,
+                    onBack = { pacienteId = null }
+                )
 
-        else -> ListaPacientesScreen(
-            perfil = perfilActual,
-            pacienteDao = pacienteDao,
-            alarmaDao = alarmaDao,
-            modifier = modifier.safeDrawingPadding(),
-            onPacienteClick = { pacienteSeleccionado = it }
-        )
+                //ya no existe, por ejemplo si se elimino desde su ficha
+                pacienteId != null -> LaunchedEffect(pacienteId) {
+                    pacienteId = null
+                }
+
+                agregando -> AgregarPacienteScreen(
+                    perfilId = perfilActual.id,
+                    pacientes = pacientes,
+                    modifier = modifier.safeDrawingPadding(),
+                    onGuardar = { nuevo ->
+                        scope.launch { withContext(NonCancellable) { pacienteDao.insert(nuevo) } }
+                        agregando = false
+                    },
+                    onVolver = { agregando = false }
+                )
+
+                else -> ListaPacientesScreen(
+                    pacientes = pacientes,
+                    alarmaDao = alarmaDao,
+                    modifier = modifier.safeDrawingPadding(),
+                    onPacienteClick = { pacienteId = it.id },
+                    onAgregar = { agregando = true }
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun ListaPacientesScreen(
-    perfil: Perfil,
-    pacienteDao: PacienteDao,
+    pacientes: List<Paciente>,
     alarmaDao: AlarmaDao,
     modifier: Modifier = Modifier,
-    onPacienteClick: (Paciente) -> Unit
+    onPacienteClick: (Paciente) -> Unit,
+    onAgregar: () -> Unit
 ) {
-    val pacientes by remember(perfil.id) {
-        pacienteDao.getByPerfil(perfil.id)
-    }
-        .collectAsState(initial = emptyList())
-    var nombre by remember { mutableStateOf("") }
-    var relacion by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current.applicationContext
-    var pacienteAEliminar by remember { mutableStateOf<Paciente?>(null) }
     val hayRecordatorios by remember { alarmaDao.hayActivas() }.collectAsState(initial = false)
-
+    //se renueva al volver a la app, asi la edad cambia el dia del cumpleaños
+    val hoy = Fechas.millisAIso(rememberAhora())
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .imePadding()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        Text("Pacientes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Pacientes",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
+        )
         if (hayRecordatorios) {
-            AvisoRecordatorios(modifier = Modifier.padding(bottom = 8.dp))
+            AvisoRecordatorios(modifier = Modifier.padding(bottom = 12.dp))
         }
-
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            if (pacientes.isEmpty()) {
-                item {
-                    Text(
-                        "Todavía no hay pacientes. Agregue uno abajo.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
-                }
-            }
-            items(pacientes) { paciente ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clickable {
-                            onPacienteClick(paciente)
-                        },
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                paciente.nombre,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                paciente.relacion,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        IconButton(onClick = {
-                            pacienteAEliminar = paciente
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = "Eliminar paciente",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Card(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = {
-                        if (it.length <= CampoTexto.NOMBRE_PERSONA.maximo
-                        ) nombre = it
-                    },
-                    label = { Text("Nombre") },
-                    supportingText = {
-                        Text("${nombre.length}/${CampoTexto.NOMBRE_PERSONA.maximo}")
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+            if (pacientes.isEmpty()) {
+                Text(
+                    "Todavía no hay pacientes. Agregue el primero con el botón de abajo.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = relacion,
-                    onValueChange = { if (it.length <= CampoTexto.RELACION.maximo) relacion = it },
-                    label = { Text("Relación (ej: Yo, Hijo/a, Padre)") },
-                    supportingText = { Text("${relacion.length}/${CampoTexto.RELACION.maximo}") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        val nombreAGuardar = ReglasTexto.normalizar(nombre)
-                        val relacionAGuardar = ReglasTexto.normalizar(relacion)
-                        val errorFormulario = ReglasTexto.validar(nombre, CampoTexto.NOMBRE_PERSONA)
-                            ?: ReglasTexto.validar(relacion, CampoTexto.RELACION)
-                        if (errorFormulario != null) {
-                            error = errorFormulario
-                        } else {
-                            nombre = ""
-                            relacion = ""
-                            error = null
-                            scope.launch {
-                                pacienteDao.insert(
-                                    Paciente(
-                                        perfilId = perfil.id,
-                                        nombre = nombreAGuardar,
-                                        relacion = relacionAGuardar
-                                    )
-                                )
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Agregar")
-                }
-                error?.let {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+            }
+            //el DAO los entrega ordenados por nombre
+            pacientes.forEach { paciente ->
+                TarjetaPaciente(paciente, hoy, onClick = { onPacienteClick(paciente) })
             }
         }
-        pacienteAEliminar?.let { paciente ->
-            AlertDialog(
-                onDismissRequest = { pacienteAEliminar = null },
-                title = { Text("Eliminar paciente") },
-                text = { Text("¿Seguro que quiere eliminar a ${paciente.nombre}? También se eliminarán sus medicamentos, horas médicas, exámenes, mediciones de presión y documentos.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        pacienteAEliminar = null
-                        scope.launch {
-                            alarmaDao.getIdsByPaciente(paciente.id).forEach { alarmaId ->
-                                AlarmScheduler.cancelar(context, alarmaId)
-                            }
-                            val documentos = pacienteDao.getDocumentos(paciente.id)
-                            pacienteDao.delete(paciente)
-                            documentos.forEach { Documentos.borrar(it) }
-                        }
-                    }) {
-                        Text("Eliminar")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { pacienteAEliminar = null }) {
-                        Text("Cancelar")
-                    }
-                }
+        BotonAgregar(texto = "Agregar paciente", habilitado = true, onClick = onAgregar)
+    }
+}
+
+@Composable
+private fun TarjetaPaciente(paciente: Paciente, hoy: String, onClick: () -> Unit) {
+    TarjetaLista(onClick) {
+        Text(
+            paciente.nombre,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            paciente.relacion,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        paciente.fechaNacimiento?.let {
+            Text(
+                ReglasPaciente.textoEdad(it, hoy),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        //los pacientes antiguos y el Yo del perfil parten sin ficha
+        if (!ReglasPaciente.fichaCompleta(paciente)) {
+            Text(
+                "Faltan datos de la ficha",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+//el formulario va en su propia pantalla, asi la lista no queda tapada por el teclado
+@Composable
+private fun AgregarPacienteScreen(
+    perfilId: Long,
+    pacientes: List<Paciente>,
+    modifier: Modifier = Modifier,
+    onGuardar: (Paciente) -> Unit,
+    onVolver: () -> Unit
+) {
+    BackHandler(onBack = onVolver)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding()
+            .padding(horizontal = 16.dp)
+    ) {
+        BarraVolver(titulo = "Agregar paciente", onVolver = onVolver)
+        PacienteFormulario(
+            perfilId = perfilId,
+            inicial = null,
+            pacientes = pacientes,
+            onGuardar = onGuardar
+        )
+    }
+}
+
+//Room borra en cascada las filas, pero las alarmas del sistema y los archivos hay que borrarlos aparte
+private suspend fun eliminarPaciente(
+    context: Context,
+    paciente: Paciente,
+    pacienteDao: PacienteDao,
+    alarmaDao: AlarmaDao
+) {
+    withContext(NonCancellable) {
+        alarmaDao.getIdsByPaciente(paciente.id).forEach { AlarmScheduler.cancelar(context, it) }
+        //se leen antes de borrar, despues ya no quedan en la base
+        val documentos = pacienteDao.getDocumentos(paciente.id)
+        pacienteDao.delete(paciente)
+        documentos.forEach { Documentos.borrar(it) }
     }
 }

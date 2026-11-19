@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -27,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 //piezas que comparten las listas y los detalles del historial
@@ -144,5 +147,23 @@ internal fun BotonAgregar(texto: String, habilitado: Boolean, onClick: () -> Uni
         Icon(Icons.Filled.Add, contentDescription = null)
         Spacer(Modifier.width(8.dp))
         Text(texto)
+    }
+}
+
+//boton Volver y titulo arriba de las listas y formularios, null = sin titulo
+@Composable
+internal fun BarraVolver(titulo: String?, onVolver: () -> Unit) {
+    TextButton(onClick = onVolver) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text("Volver")
+    }
+    if (titulo != null) {
+        Text(
+            titulo,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(12.dp))
     }
 }

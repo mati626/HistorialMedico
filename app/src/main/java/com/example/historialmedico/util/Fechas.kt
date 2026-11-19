@@ -5,6 +5,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.text.ParseException
 
 object Fechas{
     private val ZONA_UTC: TimeZone= TimeZone.getTimeZone("UTC")
@@ -14,6 +15,15 @@ object Fechas{
         SimpleDateFormat("yyyy-MM-dd", Locale.US)
             .apply { timeZone=ZONA_UTC }
             .format(Date(utcMillis))
+
+    //"2026-10-18" -> medianoche UTC de ese dia, el formato que usa el selector de fecha
+    fun isoAUtcMillis(iso: String): Long? = try {
+        SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            .apply { timeZone = ZONA_UTC }
+            .parse(iso)?.time
+    } catch (e: ParseException) {
+        null
+    }
 
     //"2026-10-18"->"18/10/2026"
     fun isoAVisible(iso: String): String{

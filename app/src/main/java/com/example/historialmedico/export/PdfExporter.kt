@@ -17,9 +17,12 @@ import com.example.historialmedico.data.ReglasExamen
 import com.example.historialmedico.util.Fechas
 import java.io.File
 import java.io.FileOutputStream
+import com.example.historialmedico.data.ReglasPaciente
 
 object PdfExporter {
     private const val LADO_MAXIMO_PX = 1500
+    //lo que falta se escribe igual, asi el medico sabe que no se registro y no que se omitio
+    private const val SIN_REGISTRAR = "Sin registrar"
     fun generarPdf(
         context: Context,
         paciente: Paciente,
@@ -99,9 +102,21 @@ object PdfExporter {
             canvas.drawBitmap(bitmap, null, destino, null)
             y += altoFinal + 12f
         }
+        //la misma hora para la fecha de generacion y la edad
+        val ahora = System.currentTimeMillis()
         escribir("Historial Médico - ${paciente.nombre}", paintTitulo, altoLinea = 24f)
+        escribir("Generado el ${Fechas.fechaHoraVisible(ahora)}", paintTexto)
+
+        seccion("Datos del paciente")
+        val nacimiento = paciente.fechaNacimiento?.let {
+            "${Fechas.isoAVisible(it)} (${ReglasPaciente.textoEdad(it, Fechas.millisAIso(ahora))})"
+        }
         escribir("Relación: ${paciente.relacion}", paintTexto)
-        escribir("Generado el ${Fechas.fechaHoraVisible(System.currentTimeMillis())}", paintTexto)
+        escribir("Fecha de nacimiento: ${nacimiento ?: SIN_REGISTRAR}", paintTexto)
+        escribir("Sexo: ${paciente.sexo?.etiqueta ?: SIN_REGISTRAR}", paintTexto)
+        escribir("Estado civil: ${paciente.estadoCivil?.etiqueta ?: SIN_REGISTRAR}", paintTexto)
+        escribir("Previsión: ${paciente.prevision?.etiqueta ?: SIN_REGISTRAR}", paintTexto)
+        escribir("Grupo sanguíneo: ${paciente.grupoSanguineo?.etiqueta ?: SIN_REGISTRAR}", paintTexto)
 
         seccion("Medicamentos")
         if (medicamentos.isEmpty()) {
