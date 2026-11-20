@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
@@ -103,6 +102,8 @@ fun PacienteDetalleScreen(
     //dentro de una lista: el registro abierto o el formulario para agregar
     var detalleId by rememberSaveable { mutableStateOf<Long?>(null) }
     var agregando by rememberSaveable { mutableStateOf(false) }
+    //dentro de un detalle: true mientras se edita ese registro
+    var editando by rememberSaveable { mutableStateOf(false) }
     //true mientras se completa o edita la ficha
     var editandoFicha by rememberSaveable { mutableStateOf(false) }
     //guarda lo escrito en un formulario aunque se cambie de pestaña
@@ -114,12 +115,14 @@ fun PacienteDetalleScreen(
         seccion = nueva
         detalleId = null
         agregando = false
+        editando = false
     }
 
-    //del formulario o el detalle vuelve a la lista, y de la lista a las tarjetas
+    //cada llamada vuelve un paso: formulario, detalle, lista y tarjetas
     fun volver() {
         when {
             agregando -> agregando = false
+            editando -> editando = false
             detalleId != null -> detalleId = null
             else -> abrir(null)
         }
@@ -247,6 +250,7 @@ fun PacienteDetalleScreen(
                     BarraVolver(
                         titulo = when {
                             agregando -> abierta.tituloAgregar
+                            editando -> abierta.tituloEditar
                             detalleId != null -> null
                             else -> abierta.titulo
                         },
@@ -293,8 +297,10 @@ fun PacienteDetalleScreen(
                                     paciente = paciente,
                                     detalleId = detalleId,
                                     agregando = agregando,
+                                    editando = editando,
                                     onVerDetalle = { detalleId = it },
                                     onAgregar = { agregando = true },
+                                    onEditar = { editando = true },
                                     onVolver = { volver() }
                                 )
                             }
@@ -777,10 +783,21 @@ private enum class Pestana { HOY, HISTORIAL, FICHA, COMPARTIR }
 private enum class Seccion(
     val titulo: String,
     val tituloAgregar: String,
+    val tituloEditar: String,
     @DrawableRes val icono: Int
 ) {
-    MEDICAMENTOS("Medicamentos", "Agregar medicamento", R.drawable.ic_medicamento),
-    HORAS_MEDICAS("Horas médicas", "Agregar hora médica", R.drawable.ic_hora_medica),
-    EXAMENES("Exámenes", "Agregar examen", R.drawable.ic_examen),
-    PRESION("Presión", "Agregar medición", R.drawable.ic_presion)
+    MEDICAMENTOS(
+        "Medicamentos",
+        "Agregar medicamento",
+        "Editar medicamento",
+        R.drawable.ic_medicamento
+    ),
+    HORAS_MEDICAS(
+        "Horas médicas",
+        "Agregar hora médica",
+        "Editar hora médica",
+        R.drawable.ic_hora_medica
+    ),
+    EXAMENES("Exámenes", "Agregar examen", "Editar examen", R.drawable.ic_examen),
+    PRESION("Presión", "Agregar medición", "Editar medición", R.drawable.ic_presion)
 }
