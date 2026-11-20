@@ -24,8 +24,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.historialmedico.data.Examen
 import com.example.historialmedico.data.HoraMedica
 import com.example.historialmedico.data.Paciente
+import com.example.historialmedico.data.ReglasExamen
 import com.example.historialmedico.ui.components.SelectorFechaHoraDialog
 import com.example.historialmedico.util.Fechas
 import com.example.historialmedico.util.ReglasTexto
@@ -39,16 +41,34 @@ internal enum class Anticipacion(val minutos: Int, val etiqueta: String) {
     UN_DIA(1440, "1 día antes")
 }
 
-//formulario aparte, guardar lo hace la lista que sigue abierta al cerrarlo
+//la anticipacion no se guarda, sale de la diferencia entre la consulta y su recordatorio
+private fun anticipacionDe(fechaHora: Long, recordatorioMillis: Long): Anticipacion? =
+    Anticipacion.entries.firstOrNull { it.minutos * 60_000L == fechaHora - recordatorioMillis }
+
+//formulario aparte para agregar o editar, guardar lo hace la lista que sigue abierta al cerrarlo
 @Composable
 fun HoraMedicaFormulario(
     paciente: Paciente,
+    //null = hora nueva, si no, se edita esta
+    inicial: HoraMedica? = null,
+    //el recordatorio que ya tenia, si no cambia se deja como estaba
+    recordatorioInicial: Long? = null,
+    //examenes pedidos en esta consulta, al moverla tienen que seguir siendo validos
+    examenesPedidos: List<Examen> = emptyList(),
     onGuardar: (horaMedica: HoraMedica, recordatorioMillis: Long?) -> Unit
 ) {
-    var especialidad by rememberSaveable { mutableStateOf("") }
-    var lugar by rememberSaveable { mutableStateOf("") }
-    var fechaHora by rememberSaveable { mutableStateOf<Long?>(null) }
-    var anticipacion by rememberSaveable { mutableStateOf<Anticipacion?>(null) }
+    var especialidad by rememberSaveable { mutableStateOf(inicial?.especialidad.orEmpty()) }
+    var lugar by rememberSaveable { mutableStateOf(inicial?.lugar.orEmpty()) }
+    var fechaHora by rememberSaveable { mutableStateOf(inicial?.fechaHora) }
+    var anticipacion by rememberSaveable {
+        mutableStateOf(
+            if (inicial != null && recordatorioInicial != null) {
+                anticipacionDe(inicial.fechaHora, recordatorioInicial)
+            } else {
+                null
+            }
+        )
+    }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var mostrarSelectorFechaHora by remember { mutableStateOf(false) }
     var menuRecordatorioAbierto by remember { mutableStateOf(false) }
@@ -57,6 +77,7 @@ fun HoraMedicaFormulario(
 
     fun guardar() {
         if (guardado) return
+        val ahora = System.currentTimeMillis()
         val fechaHoraElegida = fechaHora
         val anticipacionElegida = anticipacion
         val recordatorio = if (fechaHoraElegida != null && anticipacionElegida != null) {
@@ -68,14 +89,17 @@ fun HoraMedicaFormulario(
             ?: ReglasTexto.validar(lugar, CampoTexto.LUGAR)
                     ?: when {
                 fechaHoraElegida == null -> "Elija la fecha y la hora"
-                recordatorio != null && recordatorio <= System.currentTimeMillis() ->
+                //si no cambio se deja aunque ya haya pasado, asi se puede corregir una consulta antigua
+                recordatorio != null && recordatorio != recordatorioInicial && recordatorio <= ahora ->
                     "Ese recordatorio ya pasó: elija una anticipación menor o quítelo"
-                else -> null
+                else -> ReglasExamen.validarMoverConsulta(fechaHoraElegida, examenesPedidos, ahora)
             }
         if (error != null || fechaHoraElegida == null) return
         guardado = true
         onGuardar(
             HoraMedica(
+                //al editar se mantiene el id, asi Room actualiza la misma hora
+                id = inicial?.id ?: 0,
                 pacienteId = paciente.id,
                 especialidad = ReglasTexto.normalizar(especialidad),
                 fechaHora = fechaHoraElegida,
@@ -164,7 +188,7 @@ fun HoraMedicaFormulario(
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
         ) {
-            Text("Guardar hora médica")
+            Text(if (inicial == null) "Guardar hora médica" else "Guardar cambios")
         }
     }
 
@@ -174,7 +198,8 @@ fun HoraMedicaFormulario(
                 fechaHora = it
                 mostrarSelectorFechaHora = false
             },
-            onCancelar = { mostrarSelectorFechaHora = false }
+            onCancelar = { mostrarSelectorFechaHora = false },
+            inicial = fechaHora
         )
     }
 }

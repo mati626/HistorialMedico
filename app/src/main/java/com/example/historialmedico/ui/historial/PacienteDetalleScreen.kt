@@ -273,11 +273,14 @@ fun PacienteDetalleScreen(
                                 Seccion.HORAS_MEDICAS -> HorasMedicasSection(
                                     dao = horaMedicaDao,
                                     alarmaDao = alarmaDao,
+                                    examenDao = examenDao,
                                     paciente = paciente,
                                     detalleId = detalleId,
                                     agregando = agregando,
+                                    editando = editando,
                                     onVerDetalle = { detalleId = it },
                                     onAgregar = { agregando = true },
+                                    onEditar = { editando = true },
                                     onVolver = { volver() }
                                 )
 
