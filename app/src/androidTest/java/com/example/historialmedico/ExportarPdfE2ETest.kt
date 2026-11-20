@@ -109,11 +109,12 @@ class ExportarPdfE2ETest {
             composeRule.onNodeWithText("Dosis").performTextInput("10 mg")
             composeRule.onNodeWithText("Guardar medicamento").performScrollTo()
                 .performSemanticsAction(SemanticsActions.OnClick)
+            //nombre y dosis juntos solo estan en la tarjeta de la lista, no en los campos del formulario
+            val tarjeta = hasText("Enalapril Maleato") and hasText("10 mg")
             composeRule.waitUntil(timeoutMillis = 5_000) {
-                composeRule.onAllNodesWithText("Enalapril Maleato 10 mg").fetchSemanticsNodes()
-                    .isNotEmpty()
+                composeRule.onAllNodes(tarjeta).fetchSemanticsNodes().isNotEmpty()
             }
-            composeRule.onNodeWithText("Enalapril Maleato 10 mg").assertIsDisplayed()
+            composeRule.onNode(tarjeta).assertIsDisplayed()
             //exportar pdf sin abrir las opciones de sistema
             intending(hasAction(Intent.ACTION_CHOOSER))
                 .respondWith(Instrumentation.ActivityResult(Activity.RESULT_OK, null))

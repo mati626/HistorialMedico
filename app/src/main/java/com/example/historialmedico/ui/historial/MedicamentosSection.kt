@@ -190,11 +190,7 @@ private fun ListaMedicamentos(
 @Composable
 private fun TarjetaMedicamento(medicamento: Medicamento, horas: List<Int>, onClick: () -> Unit) {
     TarjetaLista(onClick) {
-        Text(
-            "${medicamento.nombre} ${medicamento.dosis}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        NombreYDosis(medicamento, MaterialTheme.typography.titleMedium)
         Text(
             textoHorarios(horas),
             style = MaterialTheme.typography.bodyMedium,

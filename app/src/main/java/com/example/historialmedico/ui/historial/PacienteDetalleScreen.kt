@@ -579,11 +579,7 @@ private fun TomaPendiente(toma: TomaDeHoy, onTomar: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                "${toma.medicamento.nombre} ${toma.medicamento.dosis}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            NombreYDosis(toma.medicamento, MaterialTheme.typography.titleLarge)
             Button(
                 onClick = onTomar,
                 modifier = Modifier
@@ -618,11 +614,7 @@ private fun TomaHecha(toma: TomaDeHoy, onDesmarcar: () -> Unit) {
                     "A las ${Fechas.minutosAHora(toma.hora)}",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    "${toma.medicamento.nombre} ${toma.medicamento.dosis}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                NombreYDosis(toma.medicamento, MaterialTheme.typography.titleMedium)
                 //"Tomada" va en texto y no solo en el color de la tarjeta
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
