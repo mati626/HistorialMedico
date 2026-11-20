@@ -4,8 +4,9 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
-import kotlinx.coroutines.flow.Flow
 import androidx.room.Transaction
+import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MedicamentoDao {
@@ -18,6 +19,9 @@ interface MedicamentoDao {
     @Insert
     suspend fun insert(medicamento: Medicamento): Long
 
+    @Update
+    suspend fun update(medicamento: Medicamento)
+
     @Delete
     suspend fun delete(medicamento: Medicamento)
 
@@ -28,12 +32,30 @@ interface MedicamentoDao {
     @Insert
     suspend fun insertAlarma(alarma: Alarma): Long
 
+    @Delete
+    suspend fun deleteAlarmas(alarmas: List<Alarma>)
+
     @Transaction
     suspend fun insertConAlarmas(medicamento: Medicamento, horas: List<Int>):
             List<Alarma> {
         val medicamentoId = insert(medicamento)
         return horas.map { hora ->
             val alarma = Alarma(medicamentoId = medicamentoId, hora = hora)
+            alarma.copy(id = insertAlarma(alarma))
+        }
+    }
+
+    //cambia el medicamento y sus horas por diferencia, las que siguen no se tocan
+    @Transaction
+    suspend fun updateConAlarmas(
+        medicamento: Medicamento,
+        quitadas: List<Alarma>,
+        nuevas: List<Int>
+    ): List<Alarma> {
+        update(medicamento)
+        deleteAlarmas(quitadas)
+        return nuevas.map { hora ->
+            val alarma = Alarma(medicamentoId = medicamento.id, hora = hora)
             alarma.copy(id = insertAlarma(alarma))
         }
     }

@@ -36,6 +36,7 @@ fun MedicamentoDetalle(
     medicamento: Medicamento,
     horas: List<Int>,
     onReponer: (pastillas: Int) -> Unit,
+    onEditar: () -> Unit,
     onEliminar: () -> Unit
 ) {
     val context = LocalContext.current
@@ -82,16 +83,24 @@ fun MedicamentoDetalle(
                 }
             }
         }
-        medicamento.documentoUri?.let { uri ->
+        val receta = medicamento.documentoUri
+        if (receta != null) {
             OutlinedButton(
-                onClick = { Documentos.abrir(context, uri) },
+                onClick = { Documentos.abrir(context, receta) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
             ) {
                 Text("Ver receta")
             }
+        } else {
+            Text(
+                "Sin receta escaneada. Puede agregarla con Editar medicamento.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+        BotonEditar("Editar medicamento", onEditar)
         BotonEliminar("Eliminar medicamento") { confirmarEliminar = true }
     }
     if (reponiendo) {

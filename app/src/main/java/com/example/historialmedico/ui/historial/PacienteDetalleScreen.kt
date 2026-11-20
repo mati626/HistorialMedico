@@ -265,8 +265,10 @@ fun PacienteDetalleScreen(
                                     paciente = paciente,
                                     detalleId = detalleId,
                                     agregando = agregando,
+                                    editando = editando,
                                     onVerDetalle = { detalleId = it },
                                     onAgregar = { agregando = true },
+                                    onEditar = { editando = true },
                                     onVolver = { volver() }
                                 )
 

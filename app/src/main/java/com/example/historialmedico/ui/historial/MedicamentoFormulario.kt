@@ -52,22 +52,30 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-//formulario en su propia pantalla, guardar lo hace la lista que sigue abierta al cerrarlo
+//formulario en su propia pantalla para agregar o editar, guardar lo hace la lista que sigue abierta al cerrarlo
 @Composable
 fun MedicamentoFormulario(
     paciente: Paciente,
     existentes: List<Medicamento>,
+    //null = medicamento nuevo, si no, se edita este
+    inicial: Medicamento? = null,
+    //horas de los recordatorios que ya tiene
+    horasIniciales: List<Int> = emptyList(),
     onGuardar: (medicamento: Medicamento, horas: List<Int>) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     //rememberSaveable: lo escrito se mantiene al cambiar el tema o al volver del escaner
-    var nombre by rememberSaveable { mutableStateOf("") }
-    var dosis by rememberSaveable { mutableStateOf("") }
-    var horas by rememberSaveable { mutableStateOf(listOf<Int>()) }
-    var pastillas by rememberSaveable { mutableStateOf("") }
-    var pastillasPorToma by rememberSaveable { mutableStateOf("1") }
-    var documentoUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var nombre by rememberSaveable { mutableStateOf(inicial?.nombre.orEmpty()) }
+    var dosis by rememberSaveable { mutableStateOf(inicial?.dosis.orEmpty()) }
+    var horas by rememberSaveable { mutableStateOf(horasIniciales) }
+    //lo que decia el campo al abrir, para saber si se cambio
+    val pastillasAlAbrir = rememberSaveable { inicial?.cantidad?.toString().orEmpty() }
+    var pastillas by rememberSaveable { mutableStateOf(pastillasAlAbrir) }
+    var pastillasPorToma by rememberSaveable {
+        mutableStateOf((inicial?.unidadesPorToma ?: 1).toString())
+    }
+    var documentoUri by rememberSaveable { mutableStateOf(inicial?.documentoUri) }
     var aviso by rememberSaveable { mutableStateOf<String?>(null) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var mostrarSelectorHora by remember { mutableStateOf(false) }
@@ -110,7 +118,9 @@ fun MedicamentoFormulario(
                     if (nuevo == null) {
                         error = "No se pudo guardar la receta escaneada"
                     } else {
-                        documentoUri?.let { Documentos.borrar(it) }
+                        //la receta ya guardada no se borra aqui, si se cancela la edicion tiene que seguir
+                        documentoUri?.takeIf { it != inicial?.documentoUri }
+                            ?.let { Documentos.borrar(it) }
                         documentoUri = nuevo
                         prellenarDesde(Uri.parse(nuevo), conCantidad = false)
                     }
@@ -144,10 +154,15 @@ fun MedicamentoFormulario(
         if (guardado) return
         val nombreAGuardar = ReglasTexto.normalizar(nombre)
         val dosisAGuardar = ReglasTexto.normalizar(dosis)
+        //si no se toco se guarda la cantidad actual, Hoy pudo descontar una toma mientras se editaba
+        val pastillasSinCambio = inicial != null && pastillas == pastillasAlAbrir
         //las pastillas solo se piden con recordatorios, porque solo esas tomas se marcan en Hoy
         val errorPastillas = when {
             horas.isEmpty() -> null
-            pastillas.isBlank() -> ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
+            //sin cambio no se valida la cantidad, asi se puede editar uno que quedo en 0
+            pastillas.isBlank() || pastillasSinCambio ->
+                ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
+
             else -> ReglasPastillas.validarCantidad(pastillas.toIntOrNull())
                 ?: ReglasPastillas.validarUnidadesPorToma(pastillasPorToma.toIntOrNull())
         }
@@ -157,11 +172,14 @@ fun MedicamentoFormulario(
                     ?: when {
                 !dosis.any { it.isDigit() } -> "La dosis debe incluir un número (ej: 500 mg)"
 
-                existentes.size >= MAX_MEDICAMENTOS_POR_PACIENTE ->
+                //el maximo solo se revisa al agregar, al editar no se suma uno nuevo
+                inicial == null && existentes.size >= MAX_MEDICAMENTOS_POR_PACIENTE ->
                     "Este paciente ya tiene el máximo de $MAX_MEDICAMENTOS_POR_PACIENTE medicamentos"
 
+                //al editar no se compara consigo mismo
                 existentes.any {
-                    ReglasTexto.normalizar(it.nombre).equals(nombreAGuardar, ignoreCase = true)
+                    it.id != inicial?.id &&
+                            ReglasTexto.normalizar(it.nombre).equals(nombreAGuardar, ignoreCase = true)
                 } -> "Ya existe un medicamento con ese nombre para este paciente"
 
                 else -> null
@@ -170,11 +188,17 @@ fun MedicamentoFormulario(
         guardado = true
         onGuardar(
             Medicamento(
+                //al editar se mantiene el id, asi Room actualiza el mismo medicamento
+                id = inicial?.id ?: 0,
                 pacienteId = paciente.id,
                 nombre = nombreAGuardar,
                 dosis = dosisAGuardar,
                 documentoUri = documentoUri,
-                cantidad = if (horas.isEmpty()) null else pastillas.toIntOrNull(),
+                cantidad = when {
+                    horas.isEmpty() -> null
+                    pastillasSinCambio -> inicial?.cantidad
+                    else -> pastillas.toIntOrNull()
+                },
                 unidadesPorToma = if (horas.isEmpty()) 1 else pastillasPorToma.toIntOrNull() ?: 1
             ),
             horas
@@ -306,7 +330,7 @@ fun MedicamentoFormulario(
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
         ) {
-            Text("Guardar medicamento")
+            Text(if (inicial == null) "Guardar medicamento" else "Guardar cambios")
         }
     }
 

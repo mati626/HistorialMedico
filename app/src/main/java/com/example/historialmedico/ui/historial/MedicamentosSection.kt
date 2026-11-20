@@ -40,8 +40,10 @@ fun MedicamentosSection(
     paciente: Paciente,
     detalleId: Long?,
     agregando: Boolean,
+    editando: Boolean,
     onVerDetalle: (Long) -> Unit,
     onAgregar: () -> Unit,
+    onEditar: () -> Unit,
     onVolver: () -> Unit
 ) {
     //null hasta que Room responde, asi no aparece "no hay medicamentos" por un instante
@@ -57,6 +59,7 @@ fun MedicamentosSection(
         agregando -> MedicamentoFormulario(
             paciente = paciente,
             existentes = medicamentos.orEmpty(),
+            inicial = null,
             onGuardar = { medicamento, horas ->
                 scope.launch {
                     withContext(NonCancellable) {
@@ -71,32 +74,59 @@ fun MedicamentosSection(
 
         detalleId != null -> {
             val medicamento = medicamentos?.firstOrNull { it.id == detalleId }
+            val alarmasDelMedicamento = alarmas.orEmpty().filter { it.medicamentoId == detalleId }
             when {
                 medicamentos == null || alarmas == null -> Unit //todavia cargando
                 //ya no existe, por ejemplo si se borro y la app se reabrio en el detalle
-                medicamento == null -> LaunchedEffect(detalleId) { onVolver() }
-                else -> {
-                    val alarmasDelMedicamento = alarmas.filter { it.medicamentoId == medicamento.id }
-                    MedicamentoDetalle(
-                        medicamento = medicamento,
-                        horas = horasDe(alarmasDelMedicamento),
-                        onReponer = { pastillas ->
-                            scope.launch { dao.reponer(medicamento.id, pastillas) }
-                        },
-                        onEliminar = {
-                            alarmasDelMedicamento.forEach {
-                                AlarmScheduler.cancelar(appContext, it.id)
-                            }
-                            scope.launch {
-                                withContext(NonCancellable) {
-                                    dao.delete(medicamento)
-                                    medicamento.documentoUri?.let { Documentos.borrar(it) }
+                //editando en la clave: si estaba editando vuelve dos veces, hasta la lista
+                medicamento == null -> LaunchedEffect(detalleId, editando) { onVolver() }
+                editando -> MedicamentoFormulario(
+                    paciente = paciente,
+                    existentes = medicamentos,
+                    inicial = medicamento,
+                    horasIniciales = horasDe(alarmasDelMedicamento),
+                    onGuardar = { cambiado, horas ->
+                        //horas por diferencia: las que siguen no se tocan, asi la de hoy no se pierde
+                        val anteriores = horasDe(alarmasDelMedicamento)
+                        val quitadas = alarmasDelMedicamento.filter { it.hora !in horas }
+                        val nuevas = horas.filter { it !in anteriores }
+                        quitadas.forEach { AlarmScheduler.cancelar(appContext, it.id) }
+                        scope.launch {
+                            withContext(NonCancellable) {
+                                dao.updateConAlarmas(cambiado, quitadas, nuevas).forEach {
+                                    AlarmScheduler.programar(appContext, it)
+                                }
+                                //si se escaneo otra receta, la anterior se borra recien ahora que ya se guardo
+                                val anterior = medicamento.documentoUri
+                                if (anterior != null && anterior != cambiado.documentoUri) {
+                                    Documentos.borrar(anterior)
                                 }
                             }
-                            onVolver()
                         }
-                    )
-                }
+                        onVolver()
+                    }
+                )
+
+                else -> MedicamentoDetalle(
+                    medicamento = medicamento,
+                    horas = horasDe(alarmasDelMedicamento),
+                    onReponer = { pastillas ->
+                        scope.launch { dao.reponer(medicamento.id, pastillas) }
+                    },
+                    onEditar = onEditar,
+                    onEliminar = {
+                        alarmasDelMedicamento.forEach {
+                            AlarmScheduler.cancelar(appContext, it.id)
+                        }
+                        scope.launch {
+                            withContext(NonCancellable) {
+                                dao.delete(medicamento)
+                                medicamento.documentoUri?.let { Documentos.borrar(it) }
+                            }
+                        }
+                        onVolver()
+                    }
+                )
             }
         }
 
