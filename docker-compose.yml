@@ -1,0 +1,10 @@
+services:
+  apk:
+    # construye la imagen con el Dockerfile de esta carpeta
+    build: .
+    image: historialmedico-apk
+    # carpeta salida del PC enlazada con /salida del contenedor
+    volumes:
+      - ./salida:/salida
+    # al arrancar copia el APK compilado al PC
+    command: cp app/build/outputs/apk/debug/app-debug.apk /salida/
