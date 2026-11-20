@@ -21,7 +21,7 @@ import com.example.historialmedico.util.Fechas
 
 //pantalla de una medicion, eliminar esta aqui y no en la lista para no borrar por error
 @Composable
-fun PresionDetalle(medicion: PresionArterial, onEliminar: () -> Unit) {
+fun PresionDetalle(medicion: PresionArterial, onEditar: () -> Unit, onEliminar: () -> Unit) {
     var confirmarEliminar by rememberSaveable { mutableStateOf(false) }
 
     Column(
@@ -48,6 +48,7 @@ fun PresionDetalle(medicion: PresionArterial, onEliminar: () -> Unit) {
                 style = MaterialTheme.typography.bodyLarge
             )
         }
+        BotonEditar("Editar medición", onEditar)
         BotonEliminar("Eliminar medición") { confirmarEliminar = true }
     }
 

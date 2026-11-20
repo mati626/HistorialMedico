@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -13,6 +14,9 @@ interface PresionArterialDao {
 
     @Insert
     suspend fun insert(presionArterial: PresionArterial): Long
+
+    @Update
+    suspend fun update(presionArterial: PresionArterial)
 
     @Delete
     suspend fun delete(presionArterial: PresionArterial)

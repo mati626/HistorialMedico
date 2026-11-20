@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -70,6 +71,20 @@ internal fun BotonEliminar(texto: String, onClick: () -> Unit) {
             .heightIn(min = 48.dp)
     ) {
         Icon(Icons.Filled.Delete, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text(texto)
+    }
+}
+
+@Composable
+internal fun BotonEditar(texto: String, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+    ) {
+        Icon(Icons.Filled.Edit, contentDescription = null)
         Spacer(Modifier.width(8.dp))
         Text(texto)
     }

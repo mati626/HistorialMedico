@@ -42,19 +42,21 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-//formulario aparte, guardar lo hace la lista que sigue abierta al cerrarlo
+//formulario aparte para agregar o editar, guardar lo hace la lista que sigue abierta al cerrarlo
 @Composable
 fun PresionFormulario(
     paciente: Paciente,
+    //null = medicion nueva, si no, se edita esta
+    inicial: PresionArterial? = null,
     onGuardar: (medicion: PresionArterial) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var sistolica by rememberSaveable { mutableStateOf("") }
-    var diastolica by rememberSaveable { mutableStateOf("") }
-    var pulso by rememberSaveable { mutableStateOf("") }
-    //null = ahora, la hora se toma al guardar
-    var fechaHora by rememberSaveable { mutableStateOf<Long?>(null) }
+    var sistolica by rememberSaveable { mutableStateOf(inicial?.sistolica?.toString().orEmpty()) }
+    var diastolica by rememberSaveable { mutableStateOf(inicial?.diastolica?.toString().orEmpty()) }
+    var pulso by rememberSaveable { mutableStateOf(inicial?.pulso?.toString().orEmpty()) }
+    //null = ahora, la hora se toma al guardar. al editar parte con la que ya tenia
+    var fechaHora by rememberSaveable { mutableStateOf(inicial?.fechaHora) }
     var aviso by rememberSaveable { mutableStateOf<String?>(null) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var mostrarSelectorFechaHora by remember { mutableStateOf(false) }
@@ -116,6 +118,8 @@ fun PresionFormulario(
         guardado = true
         onGuardar(
             PresionArterial(
+                //al editar se mantiene el id, asi Room actualiza la misma medicion
+                id = inicial?.id ?: 0,
                 pacienteId = paciente.id,
                 sistolica = sistolicaNum,
                 diastolica = diastolicaNum,
@@ -184,7 +188,7 @@ fun PresionFormulario(
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
         ) {
-            Text("Guardar medición")
+            Text(if (inicial == null) "Guardar medición" else "Guardar cambios")
         }
     }
 
@@ -194,7 +198,9 @@ fun PresionFormulario(
                 fechaHora = it
                 mostrarSelectorFechaHora = false
             },
-            onCancelar = { mostrarSelectorFechaHora = false }
+            onCancelar = { mostrarSelectorFechaHora = false },
+            //abre en la fecha ya elegida, o en la guardada si se esta editando
+            inicial = fechaHora
         )
     }
 }

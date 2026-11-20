@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.Examen
+import com.example.historialmedico.data.EstadoExamen
 import com.example.historialmedico.data.HoraMedica
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.ReglasExamen
@@ -45,22 +46,24 @@ import com.example.historialmedico.util.ReglasTexto.CampoTexto
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import kotlinx.coroutines.launch
 
-//formulario aparte, guardar lo hace la lista que sigue abierta al cerrarlo
+//formulario aparte para agregar o editar, guardar lo hace la lista que sigue abierta al cerrarlo
 @Composable
 fun ExamenFormulario(
     paciente: Paciente,
     horasMedicas: List<HoraMedica>,
+    //null = examen nuevo, si no, se edita este
+    inicial: Examen? = null,
     onGuardar: (examen: Examen) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var tipo by rememberSaveable { mutableStateOf("") }
-    var realizado by rememberSaveable { mutableStateOf(false) }
-    var fecha by rememberSaveable { mutableStateOf<String?>(null) }
-    var resultado by rememberSaveable { mutableStateOf("") }
+    var tipo by rememberSaveable { mutableStateOf(inicial?.tipo.orEmpty()) }
+    var realizado by rememberSaveable { mutableStateOf(inicial?.estado == EstadoExamen.REALIZADO) }
+    var fecha by rememberSaveable { mutableStateOf(inicial?.fecha) }
+    var resultado by rememberSaveable { mutableStateOf(inicial?.resultado.orEmpty()) }
     //solo el id, una HoraMedica entera no se puede guardar al cambiar de pestaña
-    var consultaId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var documentoUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var consultaId by rememberSaveable { mutableStateOf(inicial?.horaMedicaId) }
+    var documentoUri by rememberSaveable { mutableStateOf(inicial?.documentoUri) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var mostrarSelectorFecha by remember { mutableStateOf(false) }
     var menuConsultaAbierto by remember { mutableStateOf(false) }
@@ -80,7 +83,9 @@ fun ExamenFormulario(
                     if (nuevo == null) {
                         error = "No se pudo guardar el documento escaneado"
                     } else {
-                        documentoUri?.let { Documentos.borrar(it) }
+                        //el documento ya guardado no se borra aqui, si se cancela la edicion tiene que seguir
+                        documentoUri?.takeIf { it != inicial?.documentoUri }
+                            ?.let { Documentos.borrar(it) }
                         documentoUri = nuevo
                     }
                 }
@@ -102,6 +107,8 @@ fun ExamenFormulario(
         guardado = true
         onGuardar(
             Examen(
+                //al editar se mantiene el id, asi Room actualiza el mismo examen
+                id = inicial?.id ?: 0,
                 pacienteId = paciente.id,
                 tipo = ReglasTexto.normalizar(tipo),
                 fecha = fecha,
@@ -234,7 +241,7 @@ fun ExamenFormulario(
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
         ) {
-            Text("Guardar examen")
+            Text(if (inicial == null) "Guardar examen" else "Guardar cambios")
         }
     }
 
@@ -244,7 +251,8 @@ fun ExamenFormulario(
                 fecha = Fechas.utcMillisAIso(it)
                 mostrarSelectorFecha = false
             },
-            onCancelar = { mostrarSelectorFecha = false }
+            onCancelar = { mostrarSelectorFecha = false },
+            inicial = fecha?.let { Fechas.isoAUtcMillis(it) }
         )
     }
 }

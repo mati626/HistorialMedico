@@ -60,4 +60,10 @@ object Fechas{
     //milisegundos -> "2026-10-18" (dia de la zona del celular)
     fun millisAIso(millis: Long): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(millis))
+
+    //minutos desde medianoche en la zona del celular, 08:30 da 510
+    fun minutosDelDia(millis: Long): Int {
+        val calendario = Calendar.getInstance().apply { timeInMillis = millis }
+        return calendario.get(Calendar.HOUR_OF_DAY) * 60 + calendario.get(Calendar.MINUTE)
+    }
 }

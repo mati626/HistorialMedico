@@ -34,8 +34,10 @@ fun ExamenesSection(
     paciente: Paciente,
     detalleId: Long?,
     agregando: Boolean,
+    editando: Boolean,
     onVerDetalle: (Long) -> Unit,
     onAgregar: () -> Unit,
+    onEditar: () -> Unit,
     onVolver: () -> Unit
 ) {
     //null hasta que Room responde, asi no aparece "no hay examenes" por un instante
@@ -50,6 +52,7 @@ fun ExamenesSection(
         agregando -> ExamenFormulario(
             paciente = paciente,
             horasMedicas = horasMedicas.orEmpty(),
+            inicial = null,
             onGuardar = { examen ->
                 scope.launch { withContext(NonCancellable) { dao.insert(examen) } }
                 onVolver()
@@ -61,7 +64,27 @@ fun ExamenesSection(
             when {
                 examenes == null || horasMedicas == null -> Unit //todavia cargando
                 //ya no existe, por ejemplo si se borro y la app se reabrio en el detalle
-                examen == null -> LaunchedEffect(detalleId) { onVolver() }
+                //editando en la clave: si estaba editando vuelve dos veces, hasta la lista
+                examen == null -> LaunchedEffect(detalleId, editando) { onVolver() }
+                editando -> ExamenFormulario(
+                    paciente = paciente,
+                    horasMedicas = horasMedicas,
+                    inicial = examen,
+                    onGuardar = { cambiado ->
+                        scope.launch {
+                            withContext(NonCancellable) {
+                                dao.update(cambiado)
+                                //si se escaneo otro, el anterior se borra recien ahora que ya se guardo
+                                val anterior = examen.documentoUri
+                                if (anterior != null && anterior != cambiado.documentoUri) {
+                                    Documentos.borrar(anterior)
+                                }
+                            }
+                        }
+                        onVolver()
+                    }
+                )
+
                 else -> ExamenDetalle(
                     examen = examen,
                     consulta = horasMedicas.firstOrNull { it.id == examen.horaMedicaId },
@@ -76,6 +99,7 @@ fun ExamenesSection(
                             )
                         }
                     },
+                    onEditar = onEditar,
                     onEliminar = {
                         scope.launch {
                             withContext(NonCancellable) {
