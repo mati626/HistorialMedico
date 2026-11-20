@@ -85,4 +85,15 @@ class ReglasTextoTest {
             )
         )
     }
+
+    @Test
+    fun validar_signoMasEnMedicamento_valido() {
+        //medicamentos combinados llevan + en el nombre
+        assertNull(
+            ReglasTexto.validar(
+                "Amoxicilina + Ácido clavulánico",
+                ReglasTexto.CampoTexto.MEDICAMENTO
+            )
+        )
+    }
 }
