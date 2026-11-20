@@ -23,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.util.Fechas
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,19 +54,20 @@ fun SelectorFechaDialog(
 @Composable
 fun SelectorHoraDialog(
     onConfirmar: (hora: Int, minuto: Int) -> Unit,
-    onCancelar: () -> Unit
+    onCancelar: () -> Unit,
+    inicial: Int? = null
 ) {
-    val ahora = remember { Calendar.getInstance() }
+    //inicial en minutos desde medianoche, sin inicial abre en la hora actual
+    val minutos = remember { inicial ?: Fechas.minutosDelDia(System.currentTimeMillis()) }
     val estado = rememberTimePickerState(
-        initialHour = ahora.get(Calendar.HOUR_OF_DAY),
-        initialMinute = ahora.get(Calendar.MINUTE),
+        initialHour = minutos / 60,
+        initialMinute = minutos % 60,
         is24Hour = true
     )
     AlertDialog(
         onDismissRequest = onCancelar,
         confirmButton = {
-            TextButton(onClick = { onConfirmar(estado.hour, estado.minute) })
-            {
+            TextButton(onClick = { onConfirmar(estado.hour, estado.minute) }) {
                 Text("Aceptar")
             }
         },
@@ -82,19 +82,24 @@ fun SelectorHoraDialog(
 fun SelectorFechaHoraDialog(
     onConfirmar: (Long) -> Unit,
     onCancelar: () -> Unit,
-
+    inicial: Long? = null
 ) {
     var fechaUtcMillis by remember { mutableStateOf<Long?>(null) }
     val fecha = fechaUtcMillis
     if (fecha == null) {
         SelectorFechaDialog(
             onConfirmar = { fechaUtcMillis = it },
-            onCancelar = onCancelar
+            onCancelar = onCancelar,
+            //inicial es hora local y el selector de fecha pide medianoche UTC del mismo dia
+            inicial = inicial?.let {
+                Fechas.isoAUtcMillis(Fechas.millisAIso(it))
+            }
         )
     } else {
         SelectorHoraDialog(
             onConfirmar = { hora, minuto -> onConfirmar(Fechas.combinar(fecha, hora, minuto)) },
-            onCancelar = onCancelar
+            onCancelar = onCancelar,
+            inicial = inicial?.let { Fechas.minutosDelDia(it) }
         )
     }
 }
