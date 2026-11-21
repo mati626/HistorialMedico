@@ -18,7 +18,7 @@ import com.example.historialmedico.ui.historial.BloqueDetalle
 //cada punto es un titulo y su texto, en el orden en que se muestran
 private val puntosPrivacidad = listOf(
     "Dónde se guardan" to "Solo en este teléfono, dentro de la aplicación. No hay cuentas ni servidores: nadie más recibe sus datos, tampoco quien hizo la aplicación.",
-    "Copias de seguridad" to "Sus datos no se copian a la nube ni a otro telefono. Si pierde o cambia de telefono no se pueden recuperar",
+    "Copias de seguridad" to "Sus datos no se copian a la nube ni a otro teléfono. Si pierde o cambia de teléfono, no se pueden recuperar.",
     "Acceso" to "Para entrar se pide su PIN o su huella. El PIN se guarda cifrado.",
     "Recordatorios" to "Las notificaciones muestran el nombre del paciente y el medicamento o la hora médica. En la pantalla bloqueada solo dicen \"Tiene un recordatorio\", salvo que su teléfono esté configurado para mostrar todo.",
     "Escáner de documentos" to "El escáner y la lectura del texto usan herramientas de Google que funcionan dentro del teléfono. Google recibe datos técnicos de uso, como tiempos de respuesta, pero no las fotos ni el texto leído.",
