@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
+import androidx.biometric.BiometricPrompt
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.lifecycleScope
 import com.example.historialmedico.alarms.AlarmScheduler
@@ -140,8 +141,15 @@ class MainActivity : FragmentActivity() {
                                         pinManager.reiniciarIntentos()
                                         esperaPin = 0L
                                     },
-                                    onError = { _, errString ->
-                                        errorMessage = errString.toString()
+                                    onError = { codigo, errString ->
+                                        errorMessage = when (codigo) {
+                                            //cancelar o tocar fuera de la ventana no es un error
+                                            BiometricPrompt.ERROR_NEGATIVE_BUTTON,
+                                            BiometricPrompt.ERROR_USER_CANCELED -> null
+                                            //el sistema corto la huella, ejemplo: error 5 del Samsung
+                                            BiometricPrompt.ERROR_CANCELED -> "No se pudo usar la huella. Intente de nuevo o use su PIN"
+                                            else -> errString.toString()
+                                        }
                                     },
                                     onFailed = {
                                         errorMessage =
