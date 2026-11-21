@@ -49,6 +49,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var pinManager: PinManager
     private lateinit var database: AppDataBase
 
+    //vacio a proposito: si lo niega, AvisoRecordatorios lo avisa donde hay recordatorios y abre los ajustes
     private val permisoNotificacionesLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { }
@@ -56,7 +57,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        //Recientes no guarda una imagen con datos de salud; FLAG_SECURE impediria tomar capturas
+        //Recientes no guarda una imagen con datos de salud, FLAG_SECURE impediria tomar capturas
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setRecentsScreenshotEnabled(false)
         biometricAuthManager = BiometricAuthManager(this)
         pinManager = PinManager(this)

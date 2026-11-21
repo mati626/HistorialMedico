@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
+import com.example.historialmedico.ui.components.AvisoRecordatorios
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -506,6 +507,7 @@ private fun PestanaHoy(
         .collectAsState(initial = emptyList())
     val examenes by remember(paciente.id) { examenDao.getByPaciente(paciente.id) }
         .collectAsState(initial = emptyList())
+    val hayRecordatorios by remember { alarmaDao.hayActivas() }.collectAsState(initial = false)
     val scope = rememberCoroutineScope()
 
     val tomasDeHoy = if (medicamentos != null && alarmas != null && controles != null)
@@ -529,6 +531,8 @@ private fun PestanaHoy(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Hoy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        //el mismo aviso de pacientes, aqui se ve todos los dias
+        if (hayRecordatorios) AvisoRecordatorios()
         if (tomasDeHoy != null && tomasDeHoy.isEmpty()) {
             Text(
                 "No hay tomas para hoy. Los medicamentos con recordatorio aparecen aquí.",
