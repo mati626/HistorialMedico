@@ -1,0 +1,24 @@
+# IDE y archivos de este PC
+.idea
+*.iml
+local.properties
+
+# se regeneran al compilar
+**/build
+.gradle
+.kotlin
+
+# historial, no se usa para compilar
+.git
+
+# APK copiado por docker compose
+salida
+
+# archivos que no se usan para compilar
+Dockerfile
+.dockerignore
+docker-compose.yml
+**.gitignore
+.github
+README.md
+LICENSE

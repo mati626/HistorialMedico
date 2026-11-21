@@ -7,13 +7,16 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -27,7 +30,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.historialmedico.data.Medicamento
 
 //piezas que comparten las listas y los detalles del historial
 
@@ -67,6 +73,20 @@ internal fun BotonEliminar(texto: String, onClick: () -> Unit) {
             .heightIn(min = 48.dp)
     ) {
         Icon(Icons.Filled.Delete, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text(texto)
+    }
+}
+
+@Composable
+internal fun BotonEditar(texto: String, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+    ) {
+        Icon(Icons.Filled.Edit, contentDescription = null)
         Spacer(Modifier.width(8.dp))
         Text(texto)
     }
@@ -144,5 +164,32 @@ internal fun BotonAgregar(texto: String, habilitado: Boolean, onClick: () -> Uni
         Icon(Icons.Filled.Add, contentDescription = null)
         Spacer(Modifier.width(8.dp))
         Text(texto)
+    }
+}
+
+//boton Volver y titulo arriba de las listas y formularios, null = sin titulo
+@Composable
+internal fun BarraVolver(titulo: String?, onVolver: () -> Unit) {
+    TextButton(onClick = onVolver) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text("Volver")
+    }
+    if (titulo != null) {
+        Text(
+            titulo,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+//nombre arriba y dosis abajo, asi un nombre largo como Amoxicilina + Acido clavulanico no corta la dosis
+@Composable
+internal fun NombreYDosis(medicamento: Medicamento, estiloNombre: TextStyle) {
+    Column {
+        Text(medicamento.nombre, style = estiloNombre, fontWeight = FontWeight.Bold)
+        Text(medicamento.dosis, style = MaterialTheme.typography.bodyLarge)
     }
 }

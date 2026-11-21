@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.example.historialmedico.data.ExamenDao
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.alarms.AlarmScheduler
@@ -31,17 +32,23 @@ import kotlinx.coroutines.withContext
 fun HorasMedicasSection(
     dao: HoraMedicaDao,
     alarmaDao: AlarmaDao,
+    examenDao: ExamenDao,
     paciente: Paciente,
     detalleId: Long?,
     agregando: Boolean,
+    editando: Boolean,
     onVerDetalle: (Long) -> Unit,
     onAgregar: () -> Unit,
+    onEditar: () -> Unit,
     onVolver: () -> Unit
 ) {
     //null hasta que Room responde, asi no aparece "no hay horas" por un instante
     val horas = remember(paciente.id) { dao.getByPaciente(paciente.id) }
         .collectAsState(initial = null).value
     val alarmas = remember(paciente.id) { alarmaDao.getDeHorasMedicas(paciente.id) }
+        .collectAsState(initial = null).value
+    //para no mover una consulta a despues de un examen pedido en ella
+    val examenes = remember(paciente.id) { examenDao.getByPaciente(paciente.id) }
         .collectAsState(initial = null).value
     //este scope sigue vivo al cerrar el detalle o el formulario, asi guardar o borrar no se corta
     val scope = rememberCoroutineScope()
@@ -50,6 +57,7 @@ fun HorasMedicasSection(
     when {
         agregando -> HoraMedicaFormulario(
             paciente = paciente,
+            inicial = null,
             onGuardar = { horaMedica, recordatorio ->
                 scope.launch {
                     withContext(NonCancellable) {
@@ -64,24 +72,48 @@ fun HorasMedicasSection(
 
         detalleId != null -> {
             val horaMedica = horas?.firstOrNull { it.id == detalleId }
+            val alarmasDeLaHora = alarmas.orEmpty().filter { it.horaMedicaId == detalleId }
+            val alarma = alarmasDeLaHora.firstOrNull()
             when {
-                horas == null || alarmas == null -> Unit //todavia cargando
+                horas == null || alarmas == null || examenes == null -> Unit //todavia cargando
                 //ya no existe, por ejemplo si se borro y la app se reabrio en el detalle
-                horaMedica == null -> LaunchedEffect(detalleId) { onVolver() }
-                else -> {
-                    val alarmasDeLaHora = alarmas.filter { it.horaMedicaId == horaMedica.id }
-                    HoraMedicaDetalle(
-                        horaMedica = horaMedica,
-                        alarma = alarmasDeLaHora.firstOrNull(),
-                        onEliminar = {
-                            alarmasDeLaHora.forEach { AlarmScheduler.cancelar(appContext, it.id) }
+                //editando en la clave: si estaba editando vuelve dos veces, hasta la lista
+                horaMedica == null -> LaunchedEffect(detalleId, editando) { onVolver() }
+                editando -> HoraMedicaFormulario(
+                    paciente = paciente,
+                    inicial = horaMedica,
+                    recordatorioInicial = alarma?.fechaHoraMillis,
+                    examenesPedidos = examenes.filter { it.horaMedicaId == horaMedica.id },
+                    onGuardar = { cambiada, recordatorio ->
+                        if (recordatorio == alarma?.fechaHoraMillis) {
+                            //mismo recordatorio, la alarma queda como estaba aunque ya se haya enviado
+                            scope.launch { withContext(NonCancellable) { dao.update(cambiada) } }
+                        } else {
+                            alarma?.let { AlarmScheduler.cancelar(appContext, it.id) }
                             scope.launch {
-                                withContext(NonCancellable) { dao.delete(horaMedica) }
+                                withContext(NonCancellable) {
+                                    dao.updateConRecordatorio(cambiada, alarma, recordatorio)?.let {
+                                        AlarmScheduler.programar(appContext, it)
+                                    }
+                                }
                             }
-                            onVolver()
                         }
-                    )
-                }
+                        onVolver()
+                    }
+                )
+
+                else -> HoraMedicaDetalle(
+                    horaMedica = horaMedica,
+                    alarma = alarma,
+                    onEditar = onEditar,
+                    onEliminar = {
+                        alarmasDeLaHora.forEach { AlarmScheduler.cancelar(appContext, it.id) }
+                        scope.launch {
+                            withContext(NonCancellable) { dao.delete(horaMedica) }
+                        }
+                        onVolver()
+                    }
+                )
             }
         }
 

@@ -25,53 +25,75 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun LockScreen(
-    modifier: Modifier= Modifier,
+    modifier: Modifier = Modifier,
     errorMessage: String?,
-    onUnlockClick:()->Unit,
+    onUnlockClick: () -> Unit,
     showBiometricOption: Boolean,
-    onUsePinClick:()-> Unit
-){
-    Column(modifier=modifier.fillMaxSize().padding(24.dp),
+    onUsePinClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center) {
+        verticalArrangement = Arrangement.Center
+    ) {
         Icon(
             imageVector = Icons.Filled.Lock,
             contentDescription = null,
-            modifier= Modifier.size(72.dp),
+            modifier = Modifier.size(72.dp),
             tint = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier= Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "Aplicación bloqueada",
+        Text(
+            text = "Aplicación bloqueada",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "Use su huella para acceder a su Historial Médico",
+            text = if (showBiometricOption) {
+                "Use su huella o su PIN para acceder a su Historial Médico"
+            } else {
+                "Ingrese su PIN para acceder a su Historial Médico"
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier= Modifier.padding(top=8.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
         )
-        if (showBiometricOption){
+        if (showBiometricOption) {
             Button(
                 onClick = onUnlockClick,
-                modifier= Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Icon(
                     imageVector = Icons.Filled.Lock,
-                    contentDescription = null,modifier= Modifier.size(20.dp)
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier= Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Desbloquear con biometría")
             }
+            TextButton(onClick = onUsePinClick) { Text("Ingresar con PIN") }
+        } else {
+            //sin huella registrada el PIN es la unica forma de entrar, va como boton principal
+            Button(
+                onClick = onUsePinClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Text("Ingresar con PIN")
+            }
         }
-        TextButton(onClick = onUsePinClick) {Text("Usar PIN en su lugar") }
         errorMessage?.let {
-            Spacer(modifier= Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = it,
                 color = MaterialTheme.colorScheme.error,

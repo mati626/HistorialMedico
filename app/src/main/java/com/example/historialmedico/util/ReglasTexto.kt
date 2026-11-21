@@ -5,7 +5,7 @@ object ReglasTexto {
     //caracteres aceptados en cada campo
     enum class TipoTexto(val permitidos: String) {
         NOMBRE("letras, espacios, ' y -"),
-        GENERAL("letras, números, espacios y . , ' - / ( ) % # °"),
+        GENERAL("letras, números, espacios y . , ' - / ( ) % # ° +"),
         LIBRE("caracteres visibles")
     }
 
@@ -13,7 +13,6 @@ object ReglasTexto {
     enum class CampoTexto(val etiqueta: String, val maximo: Int, val tipo: TipoTexto) {
         NOMBRE_PERSONA("Nombre", 50, TipoTexto.NOMBRE),
         ESPECIALIDAD("Especialidad", 50, TipoTexto.NOMBRE),
-        RELACION("Relación", 20, TipoTexto.GENERAL),
         MEDICAMENTO("Nombre del medicamento", 50, TipoTexto.GENERAL),
         DOSIS("Dosis", 30, TipoTexto.GENERAL),
         LUGAR("Lugar", 80, TipoTexto.GENERAL),
@@ -43,9 +42,11 @@ object ReglasTexto {
         }
     }
 
+    //el + va en GENERAL por las combinaciones, como Amoxicilina + Acido clavulanico
     private fun esPermitido(c: Char, tipo: TipoTexto): Boolean = when (tipo) {
         TipoTexto.NOMBRE -> c.isLetter() || c in " '-"
-        TipoTexto.GENERAL -> c.isLetterOrDigit() || c in " .,'-/()%#°"
+        TipoTexto.GENERAL -> c.isLetterOrDigit() || c in " .,'-/()%#°+"
         TipoTexto.LIBRE -> !c.isISOControl()
     }
 }
+

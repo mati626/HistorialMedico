@@ -26,4 +26,14 @@ object ReglasExamen {
 
     fun textoConsulta(consulta: HoraMedica):
             String = "${consulta.especialidad}, ${Fechas.fechaHoraVisible(consulta.fechaHora)}"
+
+    //al editar una consulta, los examenes pedidos en ella tienen que seguir siendo validos
+    fun validarMoverConsulta(fechaHora: Long, examenes: List<Examen>, ahora: Long): String? = when {
+        examenes.isEmpty() -> null
+        //solo se piden examenes en consultas que ya pasaron, igual que en consultasPosibles
+        fechaHora > ahora -> "Esta consulta tiene exámenes pedidos, no puede quedar en una fecha futura"
+        examenes.any { validarConsulta(it.fecha, Fechas.millisAIso(fechaHora)) != null } ->
+            "Hay un examen pedido en esta consulta con fecha anterior a la nueva fecha"
+        else -> null
+    }
 }

@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.PerfilDao
+import com.example.historialmedico.ui.components.AvisoPrivacidadScreen
 import com.example.historialmedico.util.ReglasTexto
 import com.example.historialmedico.util.ReglasTexto.CampoTexto
 import kotlinx.coroutines.launch
@@ -38,7 +40,14 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
     var registrarTitular by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var guardando by remember { mutableStateOf(false) }
+    var leyendoAviso by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    //el aviso tapa el formulario, lo escrito se mantiene porque los estados estan arriba
+    if (leyendoAviso) {
+        AvisoPrivacidadScreen(onVolver = { leyendoAviso = false }, modifier = modifier)
+        return
+    }
 
     Column(
         modifier = modifier
@@ -99,7 +108,16 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodySmall
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        //se muestra antes de guardar el primer dato
+        Text(
+            "Sus datos de salud se guardan solo en este teléfono. Al continuar, acepta el aviso de privacidad.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        )
+        TextButton(onClick = { leyendoAviso = true }) { Text("Leer aviso de privacidad") }
+        Spacer(modifier = Modifier.height(8.dp))
         Button(
             enabled = !guardando,
             onClick = {

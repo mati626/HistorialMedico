@@ -41,6 +41,7 @@ fun ExamenDetalle(
     examen: Examen,
     consulta: HoraMedica?,
     onMarcarRealizado: (fecha: String, resultado: String?) -> Unit,
+    onEditar: () -> Unit,
     onEliminar: () -> Unit
 ) {
     val context = LocalContext.current
@@ -88,16 +89,24 @@ fun ExamenDetalle(
                 Text("Marcar como realizado")
             }
         }
-        examen.documentoUri?.let { uri ->
+        val documento = examen.documentoUri
+        if (documento != null) {
             OutlinedButton(
-                onClick = { Documentos.abrir(context, uri) },
+                onClick = { Documentos.abrir(context, documento) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
             ) {
                 Text("Ver documento")
             }
+        } else {
+            Text(
+                "Sin documento escaneado. Puede agregarlo con Editar examen.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+        BotonEditar("Editar examen", onEditar)
         BotonEliminar("Eliminar examen") { confirmarEliminar = true }
     }
 

@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
+import com.example.historialmedico.ui.components.AvisoRecordatorios
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -22,10 +23,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -70,6 +71,7 @@ import com.example.historialmedico.data.MedicamentoDao
 import com.example.historialmedico.data.Paciente
 import com.example.historialmedico.data.PresionArterial
 import com.example.historialmedico.data.PresionArterialDao
+import com.example.historialmedico.data.ReglasPaciente
 import com.example.historialmedico.export.PdfExporter
 import com.example.historialmedico.security.SalidaInterna
 import com.example.historialmedico.util.Fechas
@@ -83,12 +85,15 @@ import java.io.IOException
 @Composable
 fun PacienteDetalleScreen(
     paciente: Paciente,
+    pacientes: List<Paciente>,
     medicamentoDao: MedicamentoDao,
     horaMedicaDao: HoraMedicaDao,
     examenDao: ExamenDao,
     alarmaDao: AlarmaDao,
     controlTomaDao: ControlTomaDao,
     presionArterialDao: PresionArterialDao,
+    onGuardarPaciente: (Paciente) -> Unit,
+    onEliminarPaciente: () -> Unit,
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
 ) {
@@ -98,6 +103,10 @@ fun PacienteDetalleScreen(
     //dentro de una lista: el registro abierto o el formulario para agregar
     var detalleId by rememberSaveable { mutableStateOf<Long?>(null) }
     var agregando by rememberSaveable { mutableStateOf(false) }
+    //dentro de un detalle: true mientras se edita ese registro
+    var editando by rememberSaveable { mutableStateOf(false) }
+    //true mientras se completa o edita la ficha
+    var editandoFicha by rememberSaveable { mutableStateOf(false) }
     //guarda lo escrito en un formulario aunque se cambie de pestaña
     val estados = rememberSaveableStateHolder()
 
@@ -107,21 +116,30 @@ fun PacienteDetalleScreen(
         seccion = nueva
         detalleId = null
         agregando = false
+        editando = false
     }
 
-    //del formulario o el detalle vuelve a la lista, y de la lista a las tarjetas
+    //cada llamada vuelve un paso: formulario, detalle, lista y tarjetas
     fun volver() {
         when {
             agregando -> agregando = false
+            editando -> editando = false
             detalleId != null -> detalleId = null
             else -> abrir(null)
         }
     }
 
+    //igual que abrir, al cerrar el formulario de la ficha se borra lo que no se guardo
+    fun cerrarFicha() {
+        estados.removeState(Pestana.FICHA.name)
+        editandoFicha = false
+    }
+
     BackHandler {
-        //atras primero recorre historial, despues vuelve a Hoy y desde Hoy a Pacientes
+        //atras primero cierra lo abierto, despues vuelve a Hoy y desde Hoy a Pacientes
         when {
             pestana == Pestana.HISTORIAL && seccion != null -> volver()
+            pestana == Pestana.FICHA && editandoFicha -> cerrarFicha()
             pestana != Pestana.HOY -> pestana = Pestana.HOY
             else -> onBack()
         }
@@ -146,6 +164,16 @@ fun PacienteDetalleScreen(
                     },
                     icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
                     label = { Text("Historial") }
+                )
+                NavigationBarItem(
+                    selected = pestana == Pestana.FICHA,
+                    onClick = {
+                        //igual que Historial, tocarlo de nuevo cierra el formulario
+                        if (pestana == Pestana.FICHA && editandoFicha) cerrarFicha()
+                        pestana = Pestana.FICHA
+                    },
+                    icon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                    label = { Text("Ficha") }
                 )
                 NavigationBarItem(
                     selected = pestana == Pestana.COMPARTIR,
@@ -189,26 +217,46 @@ fun PacienteDetalleScreen(
                     )
                 }
 
+                pestana == Pestana.FICHA && editandoFicha -> {
+                    BarraVolver(
+                        titulo = if (ReglasPaciente.fichaCompleta(paciente)) "Editar ficha" else "Completar ficha",
+                        onVolver = { cerrarFicha() }
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        estados.SaveableStateProvider(Pestana.FICHA.name) {
+                            PacienteFormulario(
+                                perfilId = paciente.perfilId,
+                                inicial = paciente,
+                                pacientes = pacientes,
+                                onGuardar = {
+                                    onGuardarPaciente(it)
+                                    cerrarFicha()
+                                }
+                            )
+                        }
+                    }
+                }
+
+                pestana == Pestana.FICHA -> {
+                    EncabezadoPaciente(paciente, onCambiar = onBack)
+                    PestanaFicha(
+                        paciente = paciente,
+                        onEditar = { editandoFicha = true },
+                        onEliminar = onEliminarPaciente
+                    )
+                }
+
                 abierta != null -> {
-                    TextButton(onClick = { volver() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Volver")
-                    }
                     //en el detalle no va titulo aqui porque el detalle muestra el nombre del registro
-                    val titulo = when {
-                        agregando -> abierta.tituloAgregar
-                        detalleId != null -> null
-                        else -> abierta.titulo
-                    }
-                    if (titulo != null) {
-                        Text(
-                            titulo,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(12.dp))
-                    }
+                    BarraVolver(
+                        titulo = when {
+                            agregando -> abierta.tituloAgregar
+                            editando -> abierta.tituloEditar
+                            detalleId != null -> null
+                            else -> abierta.titulo
+                        },
+                        onVolver = { volver() }
+                    )
                     Column(modifier = Modifier.weight(1f)) {
                         estados.SaveableStateProvider(abierta.name) {
                             when (abierta) {
@@ -218,24 +266,24 @@ fun PacienteDetalleScreen(
                                     paciente = paciente,
                                     detalleId = detalleId,
                                     agregando = agregando,
-                                    onVerDetalle = {
-                                        detalleId = it
-                                    },
-
-                                    onAgregar = {
-                                        agregando = true
-                                    },
+                                    editando = editando,
+                                    onVerDetalle = { detalleId = it },
+                                    onAgregar = { agregando = true },
+                                    onEditar = { editando = true },
                                     onVolver = { volver() }
                                 )
 
                                 Seccion.HORAS_MEDICAS -> HorasMedicasSection(
                                     dao = horaMedicaDao,
                                     alarmaDao = alarmaDao,
+                                    examenDao = examenDao,
                                     paciente = paciente,
                                     detalleId = detalleId,
                                     agregando = agregando,
+                                    editando = editando,
                                     onVerDetalle = { detalleId = it },
                                     onAgregar = { agregando = true },
+                                    onEditar = { editando = true },
                                     onVolver = { volver() }
                                 )
 
@@ -245,8 +293,10 @@ fun PacienteDetalleScreen(
                                     paciente = paciente,
                                     detalleId = detalleId,
                                     agregando = agregando,
+                                    editando = editando,
                                     onVerDetalle = { detalleId = it },
                                     onAgregar = { agregando = true },
+                                    onEditar = { editando = true },
                                     onVolver = { volver() }
                                 )
 
@@ -255,8 +305,10 @@ fun PacienteDetalleScreen(
                                     paciente = paciente,
                                     detalleId = detalleId,
                                     agregando = agregando,
+                                    editando = editando,
                                     onVerDetalle = { detalleId = it },
                                     onAgregar = { agregando = true },
+                                    onEditar = { editando = true },
                                     onVolver = { volver() }
                                 )
                             }
@@ -455,6 +507,7 @@ private fun PestanaHoy(
         .collectAsState(initial = emptyList())
     val examenes by remember(paciente.id) { examenDao.getByPaciente(paciente.id) }
         .collectAsState(initial = emptyList())
+    val hayRecordatorios by remember { alarmaDao.hayActivas() }.collectAsState(initial = false)
     val scope = rememberCoroutineScope()
 
     val tomasDeHoy = if (medicamentos != null && alarmas != null && controles != null)
@@ -478,6 +531,8 @@ private fun PestanaHoy(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Hoy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        //el mismo aviso de pacientes, aqui se ve todos los dias
+        if (hayRecordatorios) AvisoRecordatorios()
         if (tomasDeHoy != null && tomasDeHoy.isEmpty()) {
             Text(
                 "No hay tomas para hoy. Los medicamentos con recordatorio aparecen aquí.",
@@ -528,11 +583,7 @@ private fun TomaPendiente(toma: TomaDeHoy, onTomar: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                "${toma.medicamento.nombre} ${toma.medicamento.dosis}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            NombreYDosis(toma.medicamento, MaterialTheme.typography.titleLarge)
             Button(
                 onClick = onTomar,
                 modifier = Modifier
@@ -567,11 +618,7 @@ private fun TomaHecha(toma: TomaDeHoy, onDesmarcar: () -> Unit) {
                     "A las ${Fechas.minutosAHora(toma.hora)}",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    "${toma.medicamento.nombre} ${toma.medicamento.dosis}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                NombreYDosis(toma.medicamento, MaterialTheme.typography.titleMedium)
                 //"Tomada" va en texto y no solo en el color de la tarjeta
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -674,7 +721,7 @@ private fun PestanaCompartir(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    "Incluye medicamentos, horas médicas, exámenes, presión y documentos escaneados.",
+                    "Incluye la ficha del paciente, medicamentos, horas médicas, exámenes, presión y documentos escaneados.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -733,16 +780,27 @@ private fun PestanaCompartir(
 }
 
 //pestaña de la barra inferior
-private enum class Pestana { HOY, HISTORIAL, COMPARTIR }
+private enum class Pestana { HOY, HISTORIAL, FICHA, COMPARTIR }
 
 //cada tarjeta del historial abre una de estas listas
 private enum class Seccion(
     val titulo: String,
     val tituloAgregar: String,
+    val tituloEditar: String,
     @DrawableRes val icono: Int
 ) {
-    MEDICAMENTOS("Medicamentos", "Agregar medicamento", R.drawable.ic_medicamento),
-    HORAS_MEDICAS("Horas médicas", "Agregar hora médica", R.drawable.ic_hora_medica),
-    EXAMENES("Exámenes", "Agregar examen", R.drawable.ic_examen),
-    PRESION("Presión", "Agregar medición", R.drawable.ic_presion)
+    MEDICAMENTOS(
+        "Medicamentos",
+        "Agregar medicamento",
+        "Editar medicamento",
+        R.drawable.ic_medicamento
+    ),
+    HORAS_MEDICAS(
+        "Horas médicas",
+        "Agregar hora médica",
+        "Editar hora médica",
+        R.drawable.ic_hora_medica
+    ),
+    EXAMENES("Exámenes", "Agregar examen", "Editar examen", R.drawable.ic_examen),
+    PRESION("Presión", "Agregar medición", "Editar medición", R.drawable.ic_presion)
 }

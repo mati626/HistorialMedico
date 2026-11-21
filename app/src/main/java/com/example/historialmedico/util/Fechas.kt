@@ -5,6 +5,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.text.ParseException
 
 object Fechas{
     private val ZONA_UTC: TimeZone= TimeZone.getTimeZone("UTC")
@@ -14,6 +15,15 @@ object Fechas{
         SimpleDateFormat("yyyy-MM-dd", Locale.US)
             .apply { timeZone=ZONA_UTC }
             .format(Date(utcMillis))
+
+    //"2026-10-18" -> medianoche UTC de ese dia, el formato que usa el selector de fecha
+    fun isoAUtcMillis(iso: String): Long? = try {
+        SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            .apply { timeZone = ZONA_UTC }
+            .parse(iso)?.time
+    } catch (e: ParseException) {
+        null
+    }
 
     //"2026-10-18"->"18/10/2026"
     fun isoAVisible(iso: String): String{
@@ -50,4 +60,10 @@ object Fechas{
     //milisegundos -> "2026-10-18" (dia de la zona del celular)
     fun millisAIso(millis: Long): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(millis))
+
+    //minutos desde medianoche en la zona del celular, 08:30 da 510
+    fun minutosDelDia(millis: Long): Int {
+        val calendario = Calendar.getInstance().apply { timeInMillis = millis }
+        return calendario.get(Calendar.HOUR_OF_DAY) * 60 + calendario.get(Calendar.MINUTE)
+    }
 }

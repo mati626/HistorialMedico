@@ -28,6 +28,7 @@ private const val MARGEN_RECORDATORIO = 3_600_000L
 fun HoraMedicaDetalle(
     horaMedica: HoraMedica,
     alarma: Alarma?,
+    onEditar: () -> Unit,
     onEliminar: () -> Unit
 ) {
     val ahora = rememberAhora()
@@ -57,6 +58,7 @@ fun HoraMedicaDetalle(
         BloqueDetalle("Recordatorio") {
             Text(textoRecordatorio(alarma, ahora), style = MaterialTheme.typography.bodyLarge)
         }
+        BotonEditar("Editar hora médica", onEditar)
         BotonEliminar("Eliminar hora médica") { confirmarEliminar = true }
     }
 

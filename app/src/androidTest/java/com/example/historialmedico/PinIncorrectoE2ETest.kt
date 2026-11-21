@@ -49,11 +49,11 @@ class PinIncorrectoE2ETest {
             composeRule.onNodeWithText("Guardar PIN")
                 .performSemanticsAction(SemanticsActions.OnClick)
             composeRule.waitUntil(timeoutMillis = 20_000) {
-                composeRule.onAllNodesWithText("Usar PIN en su lugar").fetchSemanticsNodes()
+                composeRule.onAllNodesWithText("Ingresar con PIN").fetchSemanticsNodes()
                     .isNotEmpty()
             }
             //intenta entrar con un pin equivocado
-            composeRule.onNodeWithText("Usar PIN en su lugar").performClick()
+            composeRule.onNodeWithText("Ingresar con PIN").performClick()
             composeRule.onNodeWithText("PIN").performTextInput("9999")
             composeRule.onNodeWithText("Desbloquear")
                 .performSemanticsAction(SemanticsActions.OnClick)

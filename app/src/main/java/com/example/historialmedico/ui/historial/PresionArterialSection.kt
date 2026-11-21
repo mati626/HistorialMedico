@@ -30,8 +30,10 @@ fun PresionArterialSection(
     paciente: Paciente,
     detalleId: Long?,
     agregando: Boolean,
+    editando: Boolean,
     onVerDetalle: (Long) -> Unit,
     onAgregar: () -> Unit,
+    onEditar: () -> Unit,
     onVolver: () -> Unit
 ) {
     //null hasta que Room responde, asi no aparece "no hay mediciones" por un instante
@@ -43,6 +45,7 @@ fun PresionArterialSection(
     when {
         agregando -> PresionFormulario(
             paciente = paciente,
+            inicial = null,
             onGuardar = { medicion ->
                 scope.launch { withContext(NonCancellable) { dao.insert(medicion) } }
                 onVolver()
@@ -54,9 +57,20 @@ fun PresionArterialSection(
             when {
                 mediciones == null -> Unit //todavia cargando
                 //ya no existe, por ejemplo si se borro y la app se reabrio en el detalle
-                medicion == null -> LaunchedEffect(detalleId) { onVolver() }
+                //editando en la clave: si estaba editando vuelve dos veces, hasta la lista
+                medicion == null -> LaunchedEffect(detalleId, editando) { onVolver() }
+                editando -> PresionFormulario(
+                    paciente = paciente,
+                    inicial = medicion,
+                    onGuardar = { cambiada ->
+                        scope.launch { withContext(NonCancellable) { dao.update(cambiada) } }
+                        onVolver()
+                    }
+                )
+
                 else -> PresionDetalle(
                     medicion = medicion,
+                    onEditar = onEditar,
                     onEliminar = {
                         scope.launch { withContext(NonCancellable) { dao.delete(medicion) } }
                         onVolver()
