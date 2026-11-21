@@ -30,8 +30,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.historialmedico.data.Medicamento
 
 //piezas que comparten las listas y los detalles del historial
 
@@ -180,5 +182,14 @@ internal fun BarraVolver(titulo: String?, onVolver: () -> Unit) {
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+//nombre arriba y dosis abajo, asi un nombre largo como Amoxicilina + Acido clavulanico no corta la dosis
+@Composable
+internal fun NombreYDosis(medicamento: Medicamento, estiloNombre: TextStyle) {
+    Column {
+        Text(medicamento.nombre, style = estiloNombre, fontWeight = FontWeight.Bold)
+        Text(medicamento.dosis, style = MaterialTheme.typography.bodyLarge)
     }
 }

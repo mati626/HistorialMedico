@@ -53,11 +53,11 @@ class PresionE2ETest {
                 .performSemanticsAction(SemanticsActions.OnClick)
             //el hash del pin tarda a proposito, en un emulador lento puede pasar los 5 s
             composeRule.waitUntil(timeoutMillis = 20_000) {
-                composeRule.onAllNodesWithText("Usar PIN en su lugar").fetchSemanticsNodes()
+                composeRule.onAllNodesWithText("Ingresar con PIN").fetchSemanticsNodes()
                     .isNotEmpty()
             }
             //entrar con el pin
-            composeRule.onNodeWithText("Usar PIN en su lugar").performClick()
+            composeRule.onNodeWithText("Ingresar con PIN").performClick()
             composeRule.onNodeWithText("PIN").performTextInput("1234")
             composeRule.onNodeWithText("Desbloquear")
                 .performSemanticsAction(SemanticsActions.OnClick)

@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
+import com.example.historialmedico.ui.components.AvisoRecordatorios
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -506,6 +507,7 @@ private fun PestanaHoy(
         .collectAsState(initial = emptyList())
     val examenes by remember(paciente.id) { examenDao.getByPaciente(paciente.id) }
         .collectAsState(initial = emptyList())
+    val hayRecordatorios by remember { alarmaDao.hayActivas() }.collectAsState(initial = false)
     val scope = rememberCoroutineScope()
 
     val tomasDeHoy = if (medicamentos != null && alarmas != null && controles != null)
@@ -529,6 +531,8 @@ private fun PestanaHoy(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Hoy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        //el mismo aviso de pacientes, aqui se ve todos los dias
+        if (hayRecordatorios) AvisoRecordatorios()
         if (tomasDeHoy != null && tomasDeHoy.isEmpty()) {
             Text(
                 "No hay tomas para hoy. Los medicamentos con recordatorio aparecen aquí.",
@@ -579,11 +583,7 @@ private fun TomaPendiente(toma: TomaDeHoy, onTomar: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                "${toma.medicamento.nombre} ${toma.medicamento.dosis}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            NombreYDosis(toma.medicamento, MaterialTheme.typography.titleLarge)
             Button(
                 onClick = onTomar,
                 modifier = Modifier
@@ -618,11 +618,7 @@ private fun TomaHecha(toma: TomaDeHoy, onDesmarcar: () -> Unit) {
                     "A las ${Fechas.minutosAHora(toma.hora)}",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    "${toma.medicamento.nombre} ${toma.medicamento.dosis}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                NombreYDosis(toma.medicamento, MaterialTheme.typography.titleMedium)
                 //"Tomada" va en texto y no solo en el color de la tarjeta
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(

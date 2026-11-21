@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,6 +39,7 @@ import com.example.historialmedico.data.Perfil
 import com.example.historialmedico.data.PerfilDao
 import com.example.historialmedico.data.PresionArterialDao
 import com.example.historialmedico.data.ReglasPaciente
+import com.example.historialmedico.ui.components.AvisoPrivacidadScreen
 import com.example.historialmedico.ui.components.AvisoRecordatorios
 import com.example.historialmedico.ui.perfil.CrearPerfilScreen
 import com.example.historialmedico.util.Documentos
@@ -106,7 +108,14 @@ fun PacientesScreen(
                     onEliminarPaciente = {
                         //primero se sale del paciente, asi no se ve mientras se borra
                         pacienteId = null
-                        scope.launch { eliminarPaciente(appContext, paciente, pacienteDao, alarmaDao) }
+                        scope.launch {
+                            eliminarPaciente(
+                                appContext,
+                                paciente,
+                                pacienteDao,
+                                alarmaDao
+                            )
+                        }
                     },
                     modifier = modifier,
                     onBack = { pacienteId = null }
@@ -151,6 +160,12 @@ private fun ListaPacientesScreen(
     val hayRecordatorios by remember { alarmaDao.hayActivas() }.collectAsState(initial = false)
     //se renueva al volver a la app, asi la edad cambia el dia del cumpleaños
     val hoy = Fechas.millisAIso(rememberAhora())
+    var leyendoAviso by rememberSaveable { mutableStateOf(false) }
+
+    if (leyendoAviso) {
+        AvisoPrivacidadScreen(onVolver = { leyendoAviso = false }, modifier = modifier)
+        return
+    }
 
     Column(
         modifier = modifier
@@ -183,6 +198,8 @@ private fun ListaPacientesScreen(
             pacientes.forEach { paciente ->
                 TarjetaPaciente(paciente, hoy, onClick = { onPacienteClick(paciente) })
             }
+            //al final de la lista, para leerlo cuando quiera
+            TextButton(onClick = { leyendoAviso = true }) { Text("Aviso de privacidad") }
         }
         BotonAgregar(texto = "Agregar paciente", habilitado = true, onClick = onAgregar)
     }

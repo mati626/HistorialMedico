@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.example.historialmedico.ui.components.AvisoRecordatorios
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -155,6 +156,7 @@ private fun ListaMedicamentos(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if(alarmas.isNotEmpty()) AvisoRecordatorios()
             if (medicamentos != null && medicamentos.isEmpty()) {
                 Text(
                     "Todavía no hay medicamentos. Agregue el primero con el botón de abajo.",
@@ -190,11 +192,7 @@ private fun ListaMedicamentos(
 @Composable
 private fun TarjetaMedicamento(medicamento: Medicamento, horas: List<Int>, onClick: () -> Unit) {
     TarjetaLista(onClick) {
-        Text(
-            "${medicamento.nombre} ${medicamento.dosis}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        NombreYDosis(medicamento, MaterialTheme.typography.titleMedium)
         Text(
             textoHorarios(horas),
             style = MaterialTheme.typography.bodyMedium,

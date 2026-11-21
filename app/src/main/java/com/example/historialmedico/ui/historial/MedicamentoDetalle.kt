@@ -23,7 +23,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.Medicamento
@@ -50,11 +49,7 @@ fun MedicamentoDetalle(
             .padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            "${medicamento.nombre} ${medicamento.dosis}",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        NombreYDosis(medicamento, MaterialTheme.typography.headlineSmall)
         BloqueDetalle("Recordatorios") {
             Text(textoHorarios(horas), style = MaterialTheme.typography.bodyLarge)
         }

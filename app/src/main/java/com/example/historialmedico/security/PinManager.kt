@@ -20,8 +20,10 @@ class PinManager(context: Context) {
 
     fun hasPinSet(): Boolean = prefs.contains(KEY_PIN_HASH)
 
+    //commit y no apply: el PIN queda escrito antes de pasar a la pantalla de bloqueo
+    @SuppressLint("ApplySharedPref")
     fun setPin(pin: String) {
-        prefs.edit().putString(KEY_PIN_HASH, HashPin.crear(pin)).apply()
+        prefs.edit().putString(KEY_PIN_HASH, HashPin.crear(pin)).commit()
     }
 
     //cuenta antes de comprobar: cerrar la app a mitad no regala el intento
@@ -45,8 +47,10 @@ class PinManager(context: Context) {
         return ReglasIntentos.restante(fallidos, ahora - ultimo)
     }
 
+    //commit y no apply: la cuenta de fallos queda en cero antes de seguir
+    @SuppressLint("ApplySharedPref")
     fun reiniciarIntentos() {
-        prefs.edit().remove(KEY_FALLIDOS).remove(KEY_ULTIMO_INTENTO).apply()
+        prefs.edit().remove(KEY_FALLIDOS).remove(KEY_ULTIMO_INTENTO).commit()
     }
 
     private fun validatePin(pin: String): Boolean {

@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -48,6 +49,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var pinManager: PinManager
     private lateinit var database: AppDataBase
 
+    //vacio a proposito: si lo niega, AvisoRecordatorios lo avisa donde hay recordatorios y abre los ajustes
     private val permisoNotificacionesLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { }
@@ -55,7 +57,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        //Recientes no guarda una imagen con datos de salud; FLAG_SECURE impediria tomar capturas
+        //Recientes no guarda una imagen con datos de salud, FLAG_SECURE impediria tomar capturas
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setRecentsScreenshotEnabled(false)
         biometricAuthManager = BiometricAuthManager(this)
         pinManager = PinManager(this)
@@ -140,8 +142,15 @@ class MainActivity : FragmentActivity() {
                                         pinManager.reiniciarIntentos()
                                         esperaPin = 0L
                                     },
-                                    onError = { _, errString ->
-                                        errorMessage = errString.toString()
+                                    onError = { codigo, errString ->
+                                        errorMessage = when (codigo) {
+                                            //cancelar o tocar fuera de la ventana no es un error
+                                            BiometricPrompt.ERROR_NEGATIVE_BUTTON,
+                                            BiometricPrompt.ERROR_USER_CANCELED -> null
+                                            //el sistema corto la huella, ejemplo: error 5 del Samsung
+                                            BiometricPrompt.ERROR_CANCELED -> "No se pudo usar la huella. Intente de nuevo o use su PIN"
+                                            else -> errString.toString()
+                                        }
                                     },
                                     onFailed = {
                                         errorMessage =
