@@ -14,21 +14,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.security.ReglasPin
-import kotlinx.coroutines.flow.first
 
 @Composable
 fun CreatePinScreen(
@@ -40,15 +34,6 @@ fun CreatePinScreen(
     var errorPin by remember { mutableStateOf<String?>(null) }
     var errorConfirmacion by remember { mutableStateOf<String?>(null) }
     var guardando by remember { mutableStateOf(false) }
-    val focoPin = remember { FocusRequester() }
-    val ventana = LocalWindowInfo.current
-
-    //el teclado solo se abre si la ventana de la app esta activa, al abrir por primera vez
-    //el aviso de notificaciones queda encima, por eso se espera a que la ventana este activa
-    LaunchedEffect(Unit) {
-        snapshotFlow { ventana.isWindowFocused }.first { it }
-        focoPin.requestFocus()
-    }
 
     //el hash del PIN tarda a proposito, guardando evita que un segundo toque lo guarde otra vez
     fun guardar() {
@@ -88,7 +73,7 @@ fun CreatePinScreen(
             },
             etiqueta = "PIN (4 a 6 dígitos)",
             error = errorPin,
-            modifier = Modifier.focusRequester(focoPin)
+            enfocarAlAbrir = true
         )
         Spacer(modifier = Modifier.height(12.dp))
         CampoPin(

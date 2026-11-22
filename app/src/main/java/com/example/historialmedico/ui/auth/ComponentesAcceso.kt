@@ -20,8 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -32,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.historialmedico.R
 import com.example.historialmedico.security.ReglasPin
+import kotlinx.coroutines.flow.first
 
 //logo y nombre de la app, lo comparten Bloqueo y Crear PIN, solo cambia la linea de abajo
 @Composable
@@ -84,8 +91,20 @@ fun CampoPin(
     etiqueta: String,
     error: String?,
     modifier: Modifier = Modifier,
+    enfocarAlAbrir: Boolean = false,
     onListo: (() -> Unit)? = null
 ) {
+    val foco = remember { FocusRequester() }
+    val ventana = LocalWindowInfo.current
+
+    //si hay un aviso encima Android ignora el pedido de teclado, por eso se espera a que la ventana de la app este activa
+    if (enfocarAlAbrir) {
+        LaunchedEffect(Unit) {
+            snapshotFlow { ventana.isWindowFocused }.first { it }
+            foco.requestFocus()
+        }
+    }
+
     OutlinedTextField(
         value = valor,
         onValueChange = {
@@ -120,6 +139,8 @@ fun CampoPin(
             imeAction = if (onListo != null) ImeAction.Done else ImeAction.Next
         ),
         keyboardActions = KeyboardActions(onDone = { onListo?.invoke() }),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .focusRequester(foco)
     )
 }
