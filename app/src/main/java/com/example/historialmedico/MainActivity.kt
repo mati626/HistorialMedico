@@ -134,7 +134,7 @@ class MainActivity : FragmentActivity() {
                             onUnlockClick = {
                                 biometricAuthManager.authenticate(
                                     title = "Historial Médico",
-                                    subtitle = "Ingrese sus datos para continuar",
+                                    subtitle = "Use su huella para entrar",
                                     negativeButtonText = "Cancelar",
                                     onSuccess = {
                                         screen = AuthScreen.AUTHENTICATED
@@ -154,7 +154,7 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onFailed = {
                                         errorMessage =
-                                            "No se reconoce la biometría, intente nuevamente"
+                                            "No se reconoció la huella. Intente de nuevo"
                                     }
                                 )
                             },
