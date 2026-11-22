@@ -8,94 +8,108 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.security.ReglasPin
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun CreatePinScreen(
-    modifier: Modifier= Modifier,
-    onPinCreated:(String)-> Unit
-){
+    modifier: Modifier = Modifier,
+    onPinCreated: (String) -> Unit
+) {
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var errorPin by remember { mutableStateOf<String?>(null) }
+    var errorConfirmacion by remember { mutableStateOf<String?>(null) }
+    var guardando by remember { mutableStateOf(false) }
+    val focoPin = remember { FocusRequester() }
+    val ventana = LocalWindowInfo.current
+
+    //el teclado solo se abre si la ventana de la app esta activa, al abrir por primera vez
+    //el aviso de notificaciones queda encima, por eso se espera a que la ventana este activa
+    LaunchedEffect(Unit) {
+        snapshotFlow { ventana.isWindowFocused }.first { it }
+        focoPin.requestFocus()
+    }
+
+    //el hash del PIN tarda a proposito, guardando evita que un segundo toque lo guarde otra vez
+    fun guardar() {
+        if (guardando) return
+        errorPin = ReglasPin.errorDeLargo(pin)
+        errorConfirmacion = ReglasPin.errorDeConfirmacion(pin, confirmPin)
+        if (errorPin == null && errorConfirmacion == null) {
+            guardando = true
+            onPinCreated(pin)
+        }
+    }
 
     Column(
-        modifier=modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Filled.Lock,
-            contentDescription = null,
-            modifier= Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary
+        EncabezadoAcceso(subtitulo = "Cree su PIN de acceso")
+        Text(
+            text = "Se pedirá cada vez que abra la aplicación. Si su teléfono tiene huella, también podrá usarla.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 12.dp, bottom = 32.dp)
         )
-        Spacer(modifier= Modifier.height(16.dp))
-
-        Text("Cree su PIN de acceso", style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold)
-        Text("Su PIN se usará si la biometría falla",
-            style = MaterialTheme.typography.bodyMedium,
-            color= MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier= Modifier.padding(top = 8.dp, bottom = 24.dp)
-        )
-        OutlinedTextField(
-            value = pin,
-            onValueChange = {if(it.length<=6&&it.all(Char::isDigit))pin=it},
-            label = {Text("PIN (4 a 6 dígitos)")},
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            modifier= Modifier.fillMaxWidth()
-        )
-        Spacer(modifier= Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = confirmPin,
-            onValueChange = {if(it.length<=6&&it.all (Char::isDigit))confirmPin=it},
-            label = {Text("Confirme su PIN")},
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            modifier= Modifier.fillMaxWidth()
-        )
-        error?.let {
-            Spacer(modifier= Modifier.height(12.dp))
-            Text(it,color=MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall)
-        }
-        Spacer(modifier= Modifier.height(24.dp))
-
-        Button(
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            onClick = {
-                val errorPin = ReglasPin.validarNuevoPin(pin, confirmPin)
-                if(errorPin == null) onPinCreated(pin) else error = errorPin
+        CampoPin(
+            valor = pin,
+            onValorChange = {
+                pin = it
+                //si cambia el PIN los dos mensajes pueden dejar de ser ciertos
+                errorPin = null
+                errorConfirmacion = null
             },
-            modifier = Modifier.fillMaxWidth().height(50.dp)
+            etiqueta = "PIN (4 a 6 dígitos)",
+            error = errorPin,
+            modifier = Modifier.focusRequester(focoPin)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        CampoPin(
+            valor = confirmPin,
+            onValorChange = {
+                confirmPin = it
+                errorConfirmacion = null
+            },
+            etiqueta = "Confirme su PIN",
+            error = errorConfirmacion,
+            onListo = { guardar() }
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = { guardar() },
+            enabled = !guardando,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
         ) {
-            Text("Guardar PIN")
+            Text(if (guardando) "Guardando..." else "Guardar PIN")
         }
     }
 }
