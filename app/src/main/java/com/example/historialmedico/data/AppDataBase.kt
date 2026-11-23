@@ -49,6 +49,8 @@ abstract class AppDataBase : RoomDatabase() {
             //SQLCipher trae su propio SQLite y no se carga solo, hay que cargarlo antes de abrir la base
             System.loadLibrary("sqlcipher")
             val clave = ClaveBaseDatos.obtener(context)
+            //tiene que ir antes de que Room abra el archivo, Room no puede abrir con clave una base sin cifrar
+            MigracionCifrado.cifrarSiHaceFalta(context.getDatabasePath(NOMBRE), clave)
             return Room.databaseBuilder(context, AppDataBase::class.java, NOMBRE)
                 .openHelperFactory(SupportOpenHelperFactory(clave))
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6)
