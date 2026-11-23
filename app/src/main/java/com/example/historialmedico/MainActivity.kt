@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +34,7 @@ import com.example.historialmedico.security.PinManager
 import com.example.historialmedico.security.ReglasBloqueo
 import com.example.historialmedico.security.SalidaInterna
 import com.example.historialmedico.ui.auth.CreatePinScreen
+import com.example.historialmedico.ui.auth.EmergenciaScreen
 import com.example.historialmedico.ui.auth.LockScreen
 import com.example.historialmedico.ui.auth.PinEntryScreen
 import com.example.historialmedico.ui.historial.PacientesScreen
@@ -42,7 +44,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class AuthScreen { CREATE_PIN, LOCKED, ENTER_PIN, AUTHENTICATED }
+enum class AuthScreen { CREATE_PIN, LOCKED, ENTER_PIN, EMERGENCIA, AUTHENTICATED }
 class MainActivity : FragmentActivity() {
 
     private lateinit var biometricAuthManager: BiometricAuthManager
@@ -83,6 +85,9 @@ class MainActivity : FragmentActivity() {
                 var ultimaSalida by remember { mutableStateOf<Long?>(null) }
                 var verificando by remember { mutableStateOf(false) }
                 var esperaPin by remember { mutableLongStateOf(pinManager.esperaRestante()) }
+                //la tarjeta de emergencia del bloqueo aparece solo si algun paciente esta activado
+                val hayEmergencia by remember { database.pacienteDao().hayEmergencia() }
+                    .collectAsState(initial = false)
                 //se relanza cada vez que cambia esperaPin: baja el contador hasta llegar a 0
                 LaunchedEffect(esperaPin) {
                     if (esperaPin > 0L) {
@@ -90,7 +95,8 @@ class MainActivity : FragmentActivity() {
                         esperaPin = pinManager.esperaRestante()
                     }
                 }
-                BackHandler(enabled = screen == AuthScreen.ENTER_PIN) {
+                //desde ingresar PIN y desde emergencia, atras vuelve al bloqueo
+                BackHandler(enabled = screen == AuthScreen.ENTER_PIN || screen == AuthScreen.EMERGENCIA) {
                     screen = AuthScreen.LOCKED
                     errorMessage = null
                 }
@@ -161,7 +167,19 @@ class MainActivity : FragmentActivity() {
                             onUsePinClick = {
                                 screen = AuthScreen.ENTER_PIN
                                 errorMessage = null
+                            },
+                            mostrarEmergencia = hayEmergencia,
+                            onEmergenciaClick = {
+                                screen = AuthScreen.EMERGENCIA
+                                errorMessage = null
                             }
+                        )
+
+                        //sin PIN a proposito: solo muestra los pacientes que el dueño activo en su ficha
+                        AuthScreen.EMERGENCIA -> EmergenciaScreen(
+                            pacienteDao = database.pacienteDao(),
+                            onVolver = { screen = AuthScreen.LOCKED },
+                            modifier = Modifier.padding(innerPadding)
                         )
 
                         AuthScreen.CREATE_PIN -> CreatePinScreen(

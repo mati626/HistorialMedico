@@ -7,12 +7,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -21,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.R
@@ -33,7 +40,9 @@ fun LockScreen(
     errorMessage: String?,
     onUnlockClick: () -> Unit,
     showBiometricOption: Boolean,
-    onUsePinClick: () -> Unit
+    onUsePinClick: () -> Unit,
+    mostrarEmergencia: Boolean,
+    onEmergenciaClick: () -> Unit
 ) {
     //se renueva al volver a la app, asi el saludo cambia si la app quedo abierta
     val saludo = saludoSegunHora(Fechas.minutosDelDia(rememberAhora()))
@@ -115,6 +124,55 @@ fun LockScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 16.dp)
             )
+        }
+        if (mostrarEmergencia) {
+            Spacer(modifier = Modifier.height(32.dp))
+            TarjetaEmergencia(onClick = onEmergenciaClick)
+        }
+    }
+}
+
+//para quien encuentra a la persona, solo aparece si el dueño activo algun paciente
+@Composable
+private fun TarjetaEmergencia(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                "¿Está ayudando en una emergencia?",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Vea alergias, medicamentos y contacto sin PIN.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Información de emergencia", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

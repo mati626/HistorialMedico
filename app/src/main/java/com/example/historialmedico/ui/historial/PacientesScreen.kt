@@ -117,6 +117,14 @@ fun PacientesScreen(
                             )
                         }
                     },
+                    //cambia solo esa columna, el resto del paciente no se toca
+                    onMostrarEmergencia = { mostrar ->
+                        scope.launch {
+                            withContext(NonCancellable) {
+                                pacienteDao.setMostrarEmergencia(paciente.id, mostrar)
+                            }
+                        }
+                    },
                     modifier = modifier,
                     onBack = { pacienteId = null }
                 )
