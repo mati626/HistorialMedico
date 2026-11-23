@@ -17,7 +17,12 @@ object ReglasTexto {
         DOSIS("Dosis", 30, TipoTexto.GENERAL),
         LUGAR("Lugar", 80, TipoTexto.GENERAL),
         TIPO_EXAMEN("Tipo de examen", 60, TipoTexto.GENERAL),
-        RESULTADO("Resultado", 300, TipoTexto.LIBRE)
+        RESULTADO("Resultado", 300, TipoTexto.LIBRE),
+        //texto libre como el resultado, cada persona describe sus alergias a su manera
+        ALERGIAS("Alergias", 200, TipoTexto.LIBRE),
+        ENFERMEDADES("Enfermedades", 200, TipoTexto.LIBRE),
+        //GENERAL y no NOMBRE para aceptar el parentesco entre parentesis, ejemplo: Carolina Muñoz (hija)
+        CONTACTO("Nombre del contacto", 50, TipoTexto.GENERAL)
     }
 
     private val espacios = Regex("\\s+")
