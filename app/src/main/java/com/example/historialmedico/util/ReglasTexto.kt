@@ -30,6 +30,9 @@ object ReglasTexto {
     //quita los espacios de los extremos y deja uno entre las palabras
     fun normalizar(texto: String): String = texto.trim().replace(espacios, " ")
 
+    //un campo opcional vacio se guarda como null, asi se distingue de un texto escrito
+    fun opcional(texto: String): String? = normalizar(texto).ifEmpty { null }
+
     //devuelve el mensaje de error, o null si el texto se puede guardar
     fun validar(texto: String, campo: CampoTexto, obligatorio: Boolean = true): String? {
         val limpio = normalizar(texto)

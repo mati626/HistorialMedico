@@ -96,4 +96,10 @@ class ReglasTextoTest {
             )
         )
     }
+
+    @Test
+    fun opcional_soloEspacios_null() {
+        //asi la pantalla de emergencia muestra "No registradas" y no un texto en blanco
+        assertNull(ReglasTexto.opcional("   "))
+    }
 }
