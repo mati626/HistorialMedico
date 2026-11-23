@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import androidx.room.Update
 
@@ -31,4 +32,20 @@ interface PacienteDao {
 
     @Delete
     suspend fun delete(paciente: Paciente)
+
+    //la pantalla de emergencia solo lee esto: los pacientes que el dueño activo, cada uno con sus medicamentos
+    @Transaction
+    @Query(
+        """SELECT * FROM pacientes WHERE mostrarEmergencia = 1
+        ORDER BY (relacion = '${ReglasPaciente.YO}') DESC, nombre ASC"""
+    )
+    fun getParaEmergencia(): Flow<List<PacienteEmergencia>>
+
+    //el bloqueo muestra la tarjeta de emergencia solo si hay algun paciente activado
+    @Query("SELECT EXISTS(SELECT 1 FROM pacientes WHERE mostrarEmergencia = 1)")
+    fun hayEmergencia(): Flow<Boolean>
+
+    //cambia solo esta columna, asi el interruptor no pisa los otros datos del paciente
+    @Query("UPDATE pacientes SET mostrarEmergencia = :mostrar WHERE id = :id")
+    suspend fun setMostrarEmergencia(id: Long, mostrar: Boolean)
 }

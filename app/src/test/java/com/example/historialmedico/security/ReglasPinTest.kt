@@ -7,22 +7,27 @@ import org.junit.Test
 class ReglasPinTest {
 
     @Test
-    fun validarNuevoPin_tresDigitos_errorDeMinimo(){
-        assertEquals("El PIN debe tener mínimo 4 dígitos", ReglasPin.validarNuevoPin("123","123"))
+    fun errorDeLargo_tresDigitos_errorDeMinimo(){
+        assertEquals("El PIN debe tener mínimo 4 dígitos", ReglasPin.errorDeLargo("123"))
     }
 
     @Test
-    fun validarNuevoPin_errorDeCoincidencia(){
-        assertEquals("Los PIN no coinciden", ReglasPin.validarNuevoPin("1234","1235"))
+    fun errorDeLargo_minimoExacto(){
+        assertNull(ReglasPin.errorDeLargo("1234"))
     }
 
     @Test
-    fun validarNuevoPin_minimoExacto(){
-        assertNull(ReglasPin.validarNuevoPin("1234","1234"))
+    fun errorDeLargo_campoMaximo(){
+        assertNull(ReglasPin.errorDeLargo("123456"))
     }
 
     @Test
-    fun validarNuevoPin_campoMaximo(){
-        assertNull(ReglasPin.validarNuevoPin("123456","123456"))
+    fun errorDeConfirmacion_distintos_errorDeCoincidencia(){
+        assertEquals("Los PIN no coinciden", ReglasPin.errorDeConfirmacion("1234","1235"))
+    }
+
+    @Test
+    fun errorDeConfirmacion_iguales(){
+        assertNull(ReglasPin.errorDeConfirmacion("1234","1234"))
     }
 }

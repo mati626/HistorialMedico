@@ -53,6 +53,8 @@ object ReglasPaciente {
 
                 else -> null
             }
+            //la seccion Para emergencias va al final, despues de los datos obligatorios
+            ?: ReglasEmergencia.validar(paciente)
     }
 
     //los pacientes guardados antes de la ficha solo tienen nombre y relacion
