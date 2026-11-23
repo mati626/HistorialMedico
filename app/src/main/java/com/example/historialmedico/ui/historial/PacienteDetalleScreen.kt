@@ -535,7 +535,16 @@ private fun PestanaHoy(
             .padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Hoy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        //titulo y fecha en su propia columna, asi quedan juntos y no separados por los 12 de las tarjetas
+        Column {
+            Text("Hoy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            //hoy se renueva al volver a la app, asi la fecha cambia sola despues de medianoche
+            Text(
+                Fechas.diaVisible(hoy),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         //el mismo aviso de pacientes, aqui se ve todos los dias
         if (hayRecordatorios) AvisoRecordatorios()
         if (tomasDeHoy != null && tomasDeHoy.isEmpty()) {
