@@ -5,6 +5,8 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.historialmedico.security.ClaveBaseDatos
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 @Database(
     entities = [
@@ -32,17 +34,27 @@ abstract class AppDataBase : RoomDatabase() {
     abstract fun controlTomaDao(): ControlTomaDao
 
     companion object {
+        private const val NOMBRE = "historial_medico.db"
+
         @Volatile
         private var INSTANCE: AppDataBase? = null
 
         fun getInstance(context: Context): AppDataBase =
             INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDataBase::class.java,
-                    "historial_medico.db"
-                ).fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6).build()
-                    .also { INSTANCE = it }
+                INSTANCE ?: crear(context.applicationContext).also { INSTANCE = it }
             }
+
+        //la base queda cifrada con SQLCipher, los DAO se usan igual que antes
+        private fun crear(context: Context): AppDataBase {
+            //SQLCipher trae su propio SQLite y no se carga solo, hay que cargarlo antes de abrir la base
+            System.loadLibrary("sqlcipher")
+            val clave = ClaveBaseDatos.obtener(context)
+            //tiene que ir antes de que Room abra el archivo, Room no puede abrir con clave una base sin cifrar
+            MigracionCifrado.cifrarSiHaceFalta(context.getDatabasePath(NOMBRE), clave)
+            return Room.databaseBuilder(context, AppDataBase::class.java, NOMBRE)
+                .openHelperFactory(SupportOpenHelperFactory(clave))
+                .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6)
+                .build()
+        }
     }
 }
