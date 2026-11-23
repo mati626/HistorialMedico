@@ -35,7 +35,10 @@ interface PacienteDao {
 
     //la pantalla de emergencia solo lee esto: los pacientes que el dueño activo, cada uno con sus medicamentos
     @Transaction
-    @Query("SELECT * FROM pacientes WHERE mostrarEmergencia = 1 ORDER BY nombre ASC")
+    @Query(
+        """SELECT * FROM pacientes WHERE mostrarEmergencia = 1
+        ORDER BY (relacion = '${ReglasPaciente.YO}') DESC, nombre ASC"""
+    )
     fun getParaEmergencia(): Flow<List<PacienteEmergencia>>
 
     //el bloqueo muestra la tarjeta de emergencia solo si hay algun paciente activado
