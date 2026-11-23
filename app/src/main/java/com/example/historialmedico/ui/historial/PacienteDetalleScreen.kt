@@ -94,6 +94,7 @@ fun PacienteDetalleScreen(
     presionArterialDao: PresionArterialDao,
     onGuardarPaciente: (Paciente) -> Unit,
     onEliminarPaciente: () -> Unit,
+    onMostrarEmergencia: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
 ) {
@@ -242,7 +243,8 @@ fun PacienteDetalleScreen(
                     PestanaFicha(
                         paciente = paciente,
                         onEditar = { editandoFicha = true },
-                        onEliminar = onEliminarPaciente
+                        onEliminar = onEliminarPaciente,
+                        onMostrarEmergencia = onMostrarEmergencia
                     )
                 }
 
