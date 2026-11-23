@@ -1,5 +1,6 @@
 package com.example.historialmedico.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -26,5 +27,12 @@ data class Paciente(
     val sexo: Sexo?=null,
     val estadoCivil: EstadoCivil?=null,
     val prevision: Prevision?=null,
-    val grupoSanguineo: GrupoSanguineo?=null
+    val grupoSanguineo: GrupoSanguineo?=null,
+    //datos para emergencias, todos opcionales
+    val alergias: String? = null,
+    val enfermedades: String? = null,
+    val contactoNombre: String? = null,
+    val contactoTelefono: String? = null,
+    //el dueño decide si se ven sin PIN, parte apagado y los pacientes que ya existen quedan apagados
+    @ColumnInfo(defaultValue = "0") val mostrarEmergencia: Boolean = false
 )

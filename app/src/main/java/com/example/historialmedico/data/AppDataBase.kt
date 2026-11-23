@@ -18,8 +18,12 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         Alarma::class,
         PresionArterial::class,
         ControlToma::class],
-    version = 8, exportSchema = true,
-    autoMigrations = [AutoMigration(from = 7, to = 8)]
+    version = 9, exportSchema = true,
+    autoMigrations = [
+        AutoMigration(from = 7, to = 8),
+        //columnas de emergencia en pacientes
+        AutoMigration(from = 8, to = 9)
+    ]
 )
 abstract class AppDataBase : RoomDatabase() {
     abstract fun perfilDao(): PerfilDao
