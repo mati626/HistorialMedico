@@ -141,7 +141,8 @@ class EmergenciaE2ETest {
         }
         //al abrir la app de nuevo queda bloqueada
         ActivityScenario.launch(MainActivity::class.java).use {
-            composeRule.waitUntil(timeoutMillis = 5_000) {
+            //aqui la app parte de cero, en un emulador cargado puede pasar los 5 s igual que el hash del pin
+            composeRule.waitUntil(timeoutMillis = 20_000) {
                 composeRule.onAllNodesWithText("Información de emergencia").fetchSemanticsNodes()
                     .isNotEmpty()
             }

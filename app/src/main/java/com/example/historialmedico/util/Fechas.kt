@@ -31,6 +31,17 @@ object Fechas{
         return if (partes.size==3)"${partes[2]}/${partes[1]}/${partes[0]}" else iso
     }
 
+    //"2026-11-21"-> dia de la semana, dia y mes en español, con mayuscula al inicio
+    //se formatea en UTC igual que se leyo, con la zona del celular saldria el dia anterior
+    fun diaVisible(iso: String): String {
+        val millis = isoAUtcMillis(iso) ?: return iso
+        val espanol = Locale.forLanguageTag("es-CL")
+        return SimpleDateFormat("EEEE d 'de' MMMM", espanol)
+            .apply { timeZone = ZONA_UTC }
+            .format(Date(millis))
+            .replaceFirstChar { it.titlecase(espanol) }
+    }
+
     //union de dia elegido con hora y minutos locales
     fun combinar(utcMillisFecha: Long,hora: Int,minuto: Int): Long{
         val dia= Calendar.getInstance(ZONA_UTC).apply { timeInMillis=utcMillisFecha }

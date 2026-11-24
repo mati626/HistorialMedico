@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -90,9 +91,10 @@ fun CreatePinScreen(
         Button(
             onClick = { guardar() },
             enabled = !guardando,
+            //heightIn y no height: con letra grande el boton crece y el texto no se corta
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .heightIn(min = 56.dp)
         ) {
             Text(if (guardando) "Guardando..." else "Guardar PIN")
         }

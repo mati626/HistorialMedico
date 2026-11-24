@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -23,9 +25,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.historialmedico.data.PerfilDao
@@ -36,11 +40,13 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
-    var nombre by remember { mutableStateOf("") }
-    var registrarTitular by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+    //rememberSaveable: lo escrito sigue ahi si Android recrea la pantalla, por ejemplo al cambiar el modo oscuro
+    var nombre by rememberSaveable { mutableStateOf("") }
+    var registrarTitular by rememberSaveable { mutableStateOf(true) }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    var leyendoAviso by rememberSaveable { mutableStateOf(false) }
+    //este no se guarda: si la app se reinicia a mitad de guardar, el boton no debe quedar bloqueado
     var guardando by remember { mutableStateOf(false) }
-    var leyendoAviso by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     //el aviso tapa el formulario, lo escrito se mantiene porque los estados estan arriba
@@ -78,18 +84,25 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
+        //toda la fila se puede tocar y el lector de pantalla la lee como un interruptor con su texto
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .toggleable(
+                    value = registrarTitular,
+                    role = Role.Switch,
+                    onValueChange = { registrarTitular = it }
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Switch(
-                checked = registrarTitular,
-                onCheckedChange = { registrarTitular = it }
-            )
+            //sin onCheckedChange: el toque lo recibe la fila entera
+            Switch(checked = registrarTitular, onCheckedChange = null)
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 "También quiero registrar mi propia salud",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
             )
         }
         Text(
@@ -137,9 +150,10 @@ fun CrearPerfilScreen(perfilDao: PerfilDao, modifier: Modifier = Modifier) {
                     }
                 }
             },
+            //heightIn y no height: con letra grande el boton crece y el texto no se corta
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
+                .heightIn(min = 56.dp)
         ) {
             Text("Continuar")
         }
