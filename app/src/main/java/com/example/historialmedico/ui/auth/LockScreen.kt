@@ -67,12 +67,13 @@ fun LockScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 12.dp, bottom = 32.dp)
         )
+        //heightIn y no height en los tres botones: con letra grande crecen y el texto no se corta
         if (showBiometricOption) {
             Button(
                 onClick = onUnlockClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .heightIn(min = 56.dp)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_huella),
@@ -89,7 +90,7 @@ fun LockScreen(
                 border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .heightIn(min = 56.dp)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_pin),
@@ -105,7 +106,7 @@ fun LockScreen(
                 onClick = onUsePinClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .heightIn(min = 56.dp)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_pin),
@@ -155,6 +156,7 @@ private fun TarjetaEmergencia(onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
+            //56 como los demas botones principales, quien ayuda puede estar apurado
             Button(
                 onClick = onClick,
                 colors = ButtonDefaults.buttonColors(
@@ -163,7 +165,7 @@ private fun TarjetaEmergencia(onClick: () -> Unit) {
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 52.dp)
+                    .heightIn(min = 56.dp)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Favorite,

@@ -3,14 +3,23 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!--tablero, abierto arriba donde va la pinza-->
     <path
-        android:pathData="M7,4h10a2,2 0,0 1,2,2v13a2,2 0,0 1,-2,2h-10a2,2 0,0 1,-2,-2v-13a2,2 0,0 1,2,-2z"
+        android:pathData="M15,4h2a2,2 0,0 1,2,2v13a2,2 0,0 1,-2,2h-10a2,2 0,0 1,-2,-2v-13a2,2 0,0 1,2,-2h2"
         android:strokeWidth="1.8"
         android:strokeColor="#FFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
+    <!--la pinza cruza el borde de arriba, asi se lee como portapapeles y no como bateria-->
     <path
-        android:pathData="M9,4V3h6v1M12,9v6M9,12h6"
+        android:pathData="M10,2h4a1,1 0,0 1,1,1v2a1,1 0,0 1,-1,1h-4a1,1 0,0 1,-1,-1v-2a1,1 0,0 1,1,-1z"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!--cruz medica, centrada en el espacio bajo la pinza-->
+    <path
+        android:pathData="M12,10.5v6M9,13.5h6"
         android:strokeWidth="1.8"
         android:strokeColor="#FFFFFF"
         android:strokeLineCap="round"
